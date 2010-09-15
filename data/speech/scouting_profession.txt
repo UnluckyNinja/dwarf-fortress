@@ -1,0 +1,2 @@
+It is my duty to scout the area around [CONTEXT:PLACE:TRANS_NAME].
+

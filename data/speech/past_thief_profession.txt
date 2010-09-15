@@ -1,0 +1,3 @@
+I once sought great treasures.
+I sought great treasures for [CONTEXT:NUMBER] of my years.
+
