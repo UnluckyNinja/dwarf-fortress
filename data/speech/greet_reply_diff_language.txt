@@ -1,2 +1,0 @@
-Hello, [AUDIENCE:RACE].  I am [SPEAKER:TRANS_NAME].
-
