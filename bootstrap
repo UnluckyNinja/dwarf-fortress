@@ -1,0 +1,12 @@
+#!/bin/bash
+
+install -d dist
+rm dist/data/ dist/raw/ dist/dwarf-fortress.bin -rf 2>/dev/null
+
+git checkout upstream/`cat version` data/ raw/ libs/Dwarf_Fortress -q
+git reset -q
+
+install -D dwarf-fortress dist/
+mv data/ raw/ dist/
+mv libs/Dwarf_Fortress dist/dwarf-fortress.bin
+rm libs -rf

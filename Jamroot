@@ -1,0 +1,121 @@
+import path ;
+import doxygen : doxygen ;
+
+use-project /liblogging : ../liblogging ;
+
+lib SDL_image ;
+lib SDL_ttf ;
+lib z ;
+lib boost_thread : : <search>/usr/local/lib ;
+lib boost_program_options : : <search>/usr/local/lib ;
+lib boost_filesystem : : <search>/usr/local/lib ;
+lib boost_iostreams : : <search>/usr/local/lib ;
+lib boost_date_time : : <search>/usr/local/lib ;
+lib boost_system : : <search>/usr/local/lib ;
+lib boost_serialization : : <search>/usr/local/lib ;
+lib boost_log : : <search>/usr/local/lib ;
+lib boost_regex : : <search>/usr/local/lib ;
+lib openal ;
+lib sndfile ;
+lib SDL ;
+lib GL ;
+lib GLU ;
+lib GLEW ;
+lib gcov ;
+
+variant coverage : <variant>debug
+                   <cflags>-fprofile-arcs
+                   <cflags>-ftest-coverage
+                   ; 
+
+project libgraphics : requirements
+  <link>shared
+  <runtime-link>shared
+  <library>GL/<link>shared
+  <library>GLU/<link>shared
+  <library>SDL/<link>shared
+  <library>boost_program_options/<link>shared
+  <library>boost_filesystem/<link>shared
+  <library>boost_system/<link>shared
+  <library>boost_thread/<link>shared
+  <library>boost_regex/<link>shared
+  <library>boost_log/<link>shared
+  <library>SDL_image/<link>shared
+  <library>SDL_ttf/<link>shared
+  <library>z
+  <library>openal/<link>shared
+  <library>sndfile/<link>shared
+  <library>/liblogging//logging
+  <include>../liblogging/include/
+  <variant>coverage:<library>gcov
+  <threading>multi
+  <include>g_src/glext/
+  <include>include/
+  <cflags>"`pkg-config --cflags gtk+-2.0`"
+  <linkflags>"`pkg-config --libs gtk+-2.0`"
+  <cflags>"`pkg-config --cflags openal`"
+  <linkflags>"`pkg-config --libs openal`"
+  <cflags>"`pkg-config --cflags sndfile`"
+  <linkflags>"`pkg-config --libs sndfile`" 
+  <cflags>"`pkg-config --cflags glu`"
+  <linkflags>"`pkg-config --libs glu`"
+  <cflags>"`pkg-config --cflags sdl`"
+  <linkflags>"`pkg-config --libs sdl`"
+  <cflags>--std=c++0x
+  <architecture>x86
+  <address-model>32
+  <instruction-set>i686
+  <dll-path>/usr/local/lib32
+  <linkflags>-L/usr/local/lib32 
+  ;
+
+path-constant TOP : . ;
+
+rule objs ( sources + : properties * ) {
+  for local name in $(sources) {
+    name_o = [ MATCH "^(.+).cp?p?$" : $(name) ] ;
+    objects += $(name_o) ;
+    obj $(name_o) : $(name) : $(properties) ;
+  }
+  
+  return $(objects) ;
+}
+
+
+extern_src = [ path.glob-tree src/extern : *.cpp ] ;
+alias extern_objs : [ objs $(extern_src) : <link>static ] ;
+
+
+intern_src = [ path.glob-tree src/intern : *.cpp ] ;
+alias intern_objs : [ objs $(intern_src) : <link>static ] ;
+
+
+lib graphics
+    : intern_objs extern_objs 
+    : <library>GLEW32/<link>shared
+      <link>shared
+      <linkflags>-Wl,--as-needed ;
+#      <linkflags>-Wl,-rpath=libs
+#      <linkflags>-Wl,--version-script=generated/symbols.txt ;
+
+
+hidden_src = [ path.glob-tree src/hidden : *.cpp ] ;
+
+#exe tetris
+#    : [ objs $(hidden_src) ] intern_objs extern_objs 
+#    : <link>static 
+#      <library>GLEW/<link>shared ;
+
+
+lib GLEW32
+    : g_src/glew.c
+    : <link>shared ;
+
+
+#install bin_dist
+#    : tetris 
+#    : <location>./dist/ ;
+
+install libs_dist
+    : graphics GLEW32
+    : <location>./dist/ ;

@@ -1,0 +1,39 @@
+From 1d34b52b1d84038d10ff99e03eb563588ca58a51 Mon Sep 17 00:00:00 2001
+From: Svein Ove Aas <svein.ove@aas.no>
+Date: Fri, 16 Jul 2010 16:17:15 +0200
+Subject: [PATCH 09/29] Imported 31.10
+
+
+diff --git a/g_src/curses.h b/g_src/curses.h
+index 681dbcd..39a31de 100644
+--- a/g_src/curses.h
++++ b/g_src/curses.h
+@@ -13,10 +13,12 @@ extern "C" {
+ #endif
+ }
+ 
++#ifdef unix
+ extern "C" {
+   void init_curses();
+   extern WINDOW **stdscr_p;
+ };
++#endif
+ 
+ 
+ #endif
+diff --git a/g_src/renderer_curses.cpp b/g_src/renderer_curses.cpp
+index 9e3c20d..3a0b4e4 100644
+--- a/g_src/renderer_curses.cpp
++++ b/g_src/renderer_curses.cpp
+@@ -282,7 +282,7 @@ extern "C" {
+       noecho();
+       keypad(*stdscr_p, true);
+       nodelay(*stdscr_p, true);
+-      set_escdelay(25); // Possible bug
++      //set_escdelay(25); // Possible bug
+       curs_set(0);
+       mmask_t dummy;
+       // mousemask(ALL_MOUSE_EVENTS, &dummy);
+-- 
+1.7.2.3
+

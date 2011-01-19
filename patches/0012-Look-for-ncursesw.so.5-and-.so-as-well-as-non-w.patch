@@ -1,0 +1,40 @@
+From d3e96d45dd2a5ee9f6918477b141fc7b68bf49af Mon Sep 17 00:00:00 2001
+From: Svein Ove Aas <svein.ove@aas.no>
+Date: Mon, 19 Jul 2010 15:48:56 +0200
+Subject: [PATCH 12/29] Look for ncursesw.so.5 and .so as well as non-w
+
+
+diff --git a/g_src/renderer_curses.cpp b/g_src/renderer_curses.cpp
+index 7fad351..8f610b0 100644
+--- a/g_src/renderer_curses.cpp
++++ b/g_src/renderer_curses.cpp
+@@ -293,16 +293,18 @@ extern "C" {
+     if (!stub_initialized) {
+       stub_initialized = true;
+       // We prefer libncursesw, but we'll accept libncurses if we have to
++      handle = dlopen("libncursesw.so.5", RTLD_LAZY);
++      if (handle) goto opened;
+       handle = dlopen("libncursesw.so", RTLD_LAZY);
+-      if (handle) {
+-        puts("Opened libncursesw");
+-      } else {
++      if (handle) goto opened;
++      puts("Didn't find any flavor of libncursesw, attempting libncurses");
++      sleep(5);
++      handle = dlopen("libncurses.so.5", RTLD_LAZY);
++      if (handle) goto opened;
+         handle = dlopen("libncurses.so", RTLD_LAZY);
+-        if (handle) {
+-          puts("Fallback: Opened libncurses, output may be broken");
+-          sleep(10);
+-        }
+-      }
++      if (handle) goto opened;
++
++    opened:
+       if (!handle) {
+         puts("Unable to open any flavor of libncurses!");
+         exit(EXIT_FAILURE);
+-- 
+1.7.2.3
+
