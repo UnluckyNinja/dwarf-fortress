@@ -53,7 +53,7 @@ objdump -Tw libs/libgraphics.so \
   | cut -d'|' -f 12- \
   > generated/libgraphics.base.sym
 
-rm libs/libgraphics.so 
+rm libs/libgraphics.so
 rmdir libs/ 2>/dev/null
 
 echo -e "{\n  global:" > generated/symbols.txt
