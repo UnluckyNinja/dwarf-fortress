@@ -25,10 +25,16 @@
 
 #include "intern/keybindings.hpp"
 
+#include "intern/config.hpp"
+
 int call_loop(void *dummy);
 
 int main(int argc, char* argv[]) {
+  config& conf = config::instance();
+
   ::boost::thread event_thread = event_engine::start();
+
+  conf.init(argc, argv);
 
 #ifdef unix
   setlocale(LC_ALL, "");
@@ -54,21 +60,24 @@ int main(int argc, char* argv[]) {
 
   init.begin(); // Load init.txt settings
 
+  bool const display_mode_is_text = conf.display().mode == display_config::display_mode::text;
+  bool const use_graphics = conf.texture().use_graphics;
+
 #if !defined(__APPLE__) && defined(unix)
-  if (!gtk_ok && !init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT)) {
-    __info
+  if (!gtk_ok && !display_mode_is_text) {
+    __fatal
       << "Display not found and PRINT_MODE not set to TEXT, aborting.";
     exit(EXIT_FAILURE);
   }
-  if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT) && init.display.flag.has_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS)) {
-    __info
+  if (display_mode_is_text && use_graphics) {
+    __fatal
       << "Graphical tiles are not compatible with text output, sorry";
     exit(EXIT_FAILURE);
   }
 #endif
 
   // Initialize video, if we /use/ video
-  retval = SDL_InitSubSystem(init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT) ? 0 : SDL_INIT_VIDEO);
+  retval = SDL_InitSubSystem(display_mode_is_text ? 0 : SDL_INIT_VIDEO);
   if (retval != 0) {
     __error
       << "SDL initialization failure" << SDL_GetError();
@@ -76,12 +85,12 @@ int main(int argc, char* argv[]) {
   }
 
 #ifdef linux
-  if (!init.media.flag.has_flag(INIT_MEDIA_FLAG_SOUND_OFF)) {
+  if (!conf.gameplay().disable_music) {
     // Initialize OpenAL
     if (!musicsound.initsound()) {
       __info
         << "Initializing OpenAL failed, no sound will be played";
-      init.media.flag.add_flag(INIT_MEDIA_FLAG_SOUND_OFF);
+      !conf.gameplay().disable_music = true;
     }
   }
 #endif

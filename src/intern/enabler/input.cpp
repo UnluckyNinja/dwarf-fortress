@@ -20,6 +20,7 @@
 #include "intern/events/event_engine.hpp"
 
 #include "intern/keybindings.hpp"
+#include "intern/config.hpp"
 
 #include <SDL/SDL_timer.h>
 
@@ -434,6 +435,8 @@ void enabler_input::on_key_event(const event< key_event >& e) {
 }
 
 void enabler_input::on_interface_event(const event< interface_event >& e) {
+  input_config const& conf = config::instance().input();
+
   // Add or remove the key from pressed_keys, keeping that up to date
   ::boost::lock_guard< ::boost::mutex > timeline_lock(timeline_mutex);
 
@@ -445,15 +448,15 @@ void enabler_input::on_interface_event(const event< interface_event >& e) {
     case REPEAT_NOT:
       return;
     case REPEAT_SLOW:
-      delay = ::boost::posix_time::milliseconds(init.input.hold_time);
+      delay = ::boost::posix_time::milliseconds(conf.key_hold_delay);
       break;
     case REPEAT_FAST:
       double accel = 1;
       // Compute acceleration
-      if (e.repeats >= init.input.repeat_accel_start) {
-        accel = ::std::min(double(init.input.repeat_accel_limit), sqrt(double(e.repeats + 1 - init.input.repeat_accel_start) + 16) - 3);
+      if (e.repeats >= conf.key_repeat_acceleration_start) {
+        accel = ::std::min(double(conf.key_repeat_acceleration_limit), sqrt(double(e.repeats + 1 - conf.key_repeat_acceleration_start) + 16) - 3);
       }
-      int millis = ::std::max(int(double(init.input.repeat_time) / accel), 25);
+      int millis = ::std::max(int(double(conf.key_repeat_delay) / accel), 25);
       delay = ::boost::posix_time::milliseconds(millis);
       break;
   }
@@ -945,6 +948,8 @@ bool enabler_input::is_recording() {
 }
 
 void enabler_input::play_macro() {
+  input_config const& conf = config::instance().input();
+
   ::boost::lock_guard< ::boost::mutex > timeline_lock(timeline_mutex);
 
   uint32_t now = SDL_GetTicks();
@@ -956,7 +961,7 @@ void enabler_input::play_macro() {
       e.k = *k;
 
       event_engine::instance().fire(e);
-      now += init.input.macro_time;
+      now += conf.macro_step_delay;
     }
   }
   macro_end = ::std::max(macro_end, now);

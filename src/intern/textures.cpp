@@ -11,6 +11,7 @@
 #include "hidden/global.hpp"
 #include "extern/init.hpp"
 #include "extern/enabler.hpp"
+#include "intern/config.hpp"
 
 #include <logging/logging.hpp>
 
@@ -176,13 +177,13 @@ void textures::upload_textures() {
       newy *= 2;
     catalog_width = newx;
     catalog_height = newy;
-    __info << "GPU does not support non-power-of-two textures, using " << catalog_width << "x" << catalog_height
-        << " catalog.";
+    __info
+      << "GPU does not support non-power-of-two textures, using " << catalog_width << "x" << catalog_height << " catalog.";
   }
   // Check whether the GPU will allow a texture of that size
   if (!testTextureSize(gl_catalog, catalog_width, catalog_height)) {
     __fatal
-        << "GPU unable to accomodate texture catalog. Retry without graphical tiles, update your drivers, or better yet update your GPU.";
+      << "GPU unable to accomodate texture catalog. Retry without graphical tiles, update your drivers, or better yet update your GPU.";
     exit(EXIT_FAILURE);
   }
 
@@ -199,7 +200,9 @@ void textures::upload_textures() {
 
   glBindTexture(GL_TEXTURE_2D, gl_catalog);
   __gl_check_errors;
-  GLint param = (init.window.flag.has_flag(INIT_WINDOW_FLAG_TEXTURE_LINEAR) ? GL_LINEAR : GL_NEAREST);
+
+  texture_config const& conf = config::instance().texture();
+  GLint param = (conf.use_linear_filtering ? GL_LINEAR : GL_NEAREST);
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param);
   __gl_check_errors;
@@ -262,8 +265,7 @@ void textures::upload_textures() {
     glBindTexture(GL_TEXTURE_2D, gl_catalog);
     __gl_check_errors;
 
-    glTexSubImage2D(GL_TEXTURE_2D, 0, ordered[pos].x, ordered[pos].y, ordered[pos].w, ordered[pos].h, GL_RGBA,
-        GL_UNSIGNED_BYTE, pixels);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, ordered[pos].x, ordered[pos].y, ordered[pos].w, ordered[pos].h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     delete[] pixels;
     __gl_check_errors;
     // Compute texture coordinates and store to gl_texpos for later output.

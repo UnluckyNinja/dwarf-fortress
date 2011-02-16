@@ -12,6 +12,7 @@
 
 #include "intern/utils/numbers.hpp"
 #include "extern/utils/strings.hpp"
+#include "intern/config.hpp"
 
 #include <logging/logging.hpp>
 
@@ -20,320 +21,10 @@
 
 void initst::begin() {
   static bool called = false;
-  if (called)
+  if (called) {
     return;
-  called = true;
-
-  ::std::string small_font = "data/art/curses_640x300.png";
-  ::std::string large_font = "data/art/curses_640x300.png";
-  ::std::ifstream fseed("data/init/init.txt");
-  if (fseed.is_open()) {
-    ::std::string str;
-
-    while (::std::getline(fseed, str)) {
-      if (str.length() > 1) {
-        ::std::string token;
-        ::std::string token2;
-
-        grab_token_string_pos(token, str, 1);
-        if (str.length() >= token.length() + 2) {
-          grab_token_string_pos(token2, str, token.length() + 2);
-        }
-
-        if (!token.compare("TRUETYPE")) {
-          if (token2 == "YES") {
-            font.use_ttf = true;
-          }
-        }
-
-        if (!token.compare("FONT")) {
-          small_font = "data/art/";
-          small_font += token2;
-        }
-        if (!token.compare("FULLFONT")) {
-          large_font = "data/art/";
-          large_font += token2;
-        }
-        if (!token.compare("WINDOWEDX")) {
-          display.desired_windowed_width = to_int32(token2);
-        }
-        if (!token.compare("WINDOWEDY")) {
-          display.desired_windowed_height = to_int32(token2);
-        }
-        if (!token.compare("RESIZABLE")) {
-          if (token2 == "NO")
-            display.flag.add_flag(INIT_DISPLAY_FLAG_NOT_RESIZABLE);
-        }
-        if (!token.compare("FULLSCREENX")) {
-          display.desired_fullscreen_width = to_int32(token2);
-        }
-        if (!token.compare("FULLSCREENY")) {
-          display.desired_fullscreen_height = to_int32(token2);
-        }
-
-        if (token == "PRINT_MODE") {
-          if (token2 == "PARTIAL") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT);
-
-            ::std::string token3;
-            if (str.length() >= token.length() + token2.length() + 3) {
-              grab_token_string_pos(token3, str, token.length() + token2.length() + 3);
-            }
-            long l = to_int32(token3);
-            if (l < 0)
-              l = 0;
-            if (l > 100)
-              l = 100;
-            display.partial_print_count = (char) l;
-          }
-          if (token2 == "PROMPT") {
-            __warn
-              << "Using only 2D (Click no) is more reliable, but means you lose features and, often, speed. Edit data/init/init.txt PRINT_MODE to avoid this dialog box.";
-
-            //            int answer = IDYES;
-            //            if (answer == IDYES)
-            token2 = "STANDARD";
-            //            else
-            //              token2 = "2D";
-          }
-          if (token2 == "TEXT") {
-#ifdef CURSES
-            display.flag.add_flag(INIT_DISPLAY_FLAG_TEXT);
-            display.flag.add_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT);
-            display.partial_print_count = 0;
-#else
-            __info
-              << "Text mode not supported on your platform, using 2D";
-            token2 = "2D";
-#endif
-          }
-          if (token2 == "FRAME_BUFFER") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_FRAME_BUFFER);
-            display.flag.add_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT);
-            display.partial_print_count = 0;
-          }
-          if (token2 == "ACCUM_BUFFER") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_ACCUM_BUFFER);
-            display.flag.add_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT);
-            display.partial_print_count = 0;
-          }
-          if (token2 == "VBO") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_VBO);
-            // display.flag.add_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT);
-            display.partial_print_count = 0;
-          }
-          if (token2 == "2DSW") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_2D);
-            display.flag.add_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT);
-            display.partial_print_count = 0;
-          }
-          if (token2 == "2D" || token2 == "2DHW") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_2D);
-            display.flag.add_flag(INIT_DISPLAY_FLAG_2DHW);
-            display.flag.add_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT);
-            display.partial_print_count = 0;
-          }
-          if (token2 == "2DASYNC") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_2D);
-            display.flag.add_flag(INIT_DISPLAY_FLAG_2DHW);
-            display.flag.add_flag(INIT_DISPLAY_FLAG_2DASYNC);
-            display.flag.add_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT);
-            display.partial_print_count = 0;
-          }
-          if (token2 == "SHADER") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_SHADER);
-          }
-        }
-
-        if (token == "SINGLE_BUFFER") {
-          if (token2 == "YES") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_SINGLE_BUFFER);
-          }
-        }
-
-        if (display.flag.has_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS)) {
-          if (!token.compare("GRAPHICS_FONT")) {
-            small_font = "data/art/";
-            small_font += token2;
-          }
-          if (!token.compare("GRAPHICS_FULLFONT")) {
-            large_font = "data/art/";
-            large_font += token2;
-          }
-          if (!token.compare("GRAPHICS_WINDOWEDX")) {
-            display.desired_windowed_width = to_int32(token2);
-          }
-          if (!token.compare("GRAPHICS_WINDOWEDY")) {
-            display.desired_windowed_height = to_int32(token2);
-          }
-          if (!token.compare("GRAPHICS_FULLSCREENX")) {
-            display.desired_fullscreen_width = to_int32(token2);
-          }
-          if (!token.compare("GRAPHICS_FULLSCREENY")) {
-            display.desired_fullscreen_height = to_int32(token2);
-          }
-          if (!token.compare("GRAPHICS_BLACK_SPACE")) {
-            if (token2 == "YES") {
-              display.flag.add_flag(INIT_DISPLAY_FLAG_BLACK_SPACE);
-            } else
-              display.flag.remove_flag(INIT_DISPLAY_FLAG_BLACK_SPACE);
-          }
-        }
-
-        if (!token.compare("GRAPHICS")) {
-          if (token2 == "YES") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS);
-          }
-        }
-
-        if (!token.compare("BLACK_SPACE")) {
-          if (token2 == "YES") {
-            display.flag.add_flag(INIT_DISPLAY_FLAG_BLACK_SPACE);
-          }
-        }
-
-        if (token == "ZOOM_SPEED") {
-          input.zoom_speed = to_int32(token2);
-        }
-        if (token == "MOUSE") {
-          if (token2 == "NO") {
-            input.flag.add_flag(INIT_INPUT_FLAG_MOUSE_OFF);
-          }
-        }
-        if (token == "VSYNC") {
-          if (token2 == "YES") {
-            window.flag.add_flag(INIT_WINDOW_FLAG_VSYNC_ON);
-          }
-          if (token2 == "NO") {
-            window.flag.add_flag(INIT_WINDOW_FLAG_VSYNC_OFF);
-          }
-        }
-        if (token == "ARB_SYNC") {
-          if (token2 == "YES")
-            display.flag.add_flag(INIT_DISPLAY_FLAG_ARB_SYNC);
-        }
-
-#ifdef WIN32
-        if(token=="PRIORITY")
-        {
-          if(token2=="REALTIME")
-          {
-            SetPriorityClass(GetCurrentProcess(),REALTIME_PRIORITY_CLASS);
-          }
-          if(token2=="HIGH")
-          {
-            SetPriorityClass(GetCurrentProcess(),HIGH_PRIORITY_CLASS);
-          }
-          if(token2=="ABOVE_NORMAL")
-          {
-            SetPriorityClass(GetCurrentProcess(),ABOVE_NORMAL_PRIORITY_CLASS);
-          }
-          if(token2=="NORMAL")
-          {
-            SetPriorityClass(GetCurrentProcess(),NORMAL_PRIORITY_CLASS);
-          }
-          if(token2=="BELOW_NORMAL")
-          {
-            SetPriorityClass(GetCurrentProcess(),BELOW_NORMAL_PRIORITY_CLASS);
-          }
-          if(token2=="IDLE")
-          {
-            SetPriorityClass(GetCurrentProcess(),IDLE_PRIORITY_CLASS);
-          }
-        }
-#endif
-
-        if (token == "TEXTURE_PARAM") {
-          if (token2 == "LINEAR") {
-            window.flag.add_flag(INIT_WINDOW_FLAG_TEXTURE_LINEAR);
-          }
-        }
-        if (token == "TOPMOST") {
-          if (token2 == "YES") {
-            window.flag.add_flag(INIT_WINDOW_FLAG_TOPMOST);
-          }
-        }
-        if (token == "FPS") {
-          if (token2 == "YES") {
-            gps.display_frames = 1;
-          }
-        }
-        if (token == "MOUSE_PICTURE") {
-          if (token2 == "YES") {
-            input.flag.add_flag(INIT_INPUT_FLAG_MOUSE_PICTURE);
-          }
-        }
-        if (!token.compare("FPS_CAP")) {
-          enabler.set_fps(to_int32(token2));
-        }
-        if (!token.compare("G_FPS_CAP")) {
-          enabler.set_gfps(to_int32(token2));
-        }
-        if (token == "WINDOWED") {
-          if (token2 == "YES") {
-            display.windowed = INIT_DISPLAY_WINDOW_TRUE;
-          }
-          if (token2 == "NO") {
-            display.windowed = INIT_DISPLAY_WINDOW_FALSE;
-          }
-          if (token2 == "PROMPT") {
-            display.windowed = INIT_DISPLAY_WINDOW_PROMPT;
-          }
-        }
-        if (!token.compare("SOUND")) {
-          if (token2 != "YES") {
-            media.flag.add_flag(INIT_MEDIA_FLAG_SOUND_OFF);
-          }
-        }
-        if (!token.compare("INTRO")) {
-          if (token2 != "YES") {
-            media.flag.add_flag(INIT_MEDIA_FLAG_INTRO_OFF);
-          }
-        }
-        if (!token.compare("VOLUME")) {
-          media.volume = to_int32(token2);
-        }
-        if (!token.compare("KEY_HOLD_MS")) {
-          input.hold_time = to_int32(token2);
-
-          if (input.hold_time < 100)
-            input.hold_time = 100;
-        }
-        if (token == "KEY_REPEAT_MS") {
-          input.repeat_time = to_int32(token2);
-
-          if (input.repeat_time < 100)
-            input.repeat_time = 100;
-        }
-        if (token == "KEY_REPEAT_ACCEL_LIMIT") {
-          input.repeat_accel_limit = to_int32(token2);
-          if (input.repeat_accel_limit < 1)
-            input.repeat_accel_limit = 1;
-        }
-        if (token == "KEY_REPEAT_ACCEL_START") {
-          input.repeat_accel_start = to_int32(token2);
-        }
-        if (token == "MACRO_MS") {
-          input.macro_time = to_int32(token2);
-
-          if (input.macro_time < 1)
-            input.macro_time = 1;
-        }
-        if (token == "RECENTER_INTERFACE_SHUTDOWN_MS") {
-          input.pause_zoom_no_interface_ms = to_int32(token2);
-
-          if (input.pause_zoom_no_interface_ms < 0)
-            input.pause_zoom_no_interface_ms = 0;
-        }
-        if (token == "COMPRESSED_SAVES") {
-          if (token2 == "YES") {
-            media.flag.add_flag(INIT_MEDIA_FLAG_COMPRESS_SAVES);
-          }
-        }
-      }
-    }
   }
-  fseed.close();
+  called = true;
 
   ::std::ifstream fseed2("data/init/colors.txt");
   if (fseed2.is_open()) {
@@ -498,30 +189,117 @@ void initst::begin() {
   }
   fseed2.close();
 
-#ifdef _DEBUG
-  enabler.window.isFullScreen = FALSE;
-#else
+  config const& conf = config::instance();
 
-  //FULL SCREEN QUERY, UNLESS IT'S ALREADY SET IN INIT
+  // ------------------------------------------------------------------------------
+  // Updating old flag mechanism to avoid breaking unmodifiable code.
 
-  if (!display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT)) {
-    if (enabler.command_line.empty()) {
-      if (display.windowed == INIT_DISPLAY_WINDOW_TRUE) {
-        enabler.fullscreen = false;
-      } else if (display.windowed == INIT_DISPLAY_WINDOW_FALSE) {
-        enabler.fullscreen = true;
-      } else {
-        __warn
-          << "Run in Fullscreen Mode?  You can set your preferences in data\\init\\init.txt. Unless you've changed your bindings, you can press F11 to toggle this setting any time.";
-        enabler.fullscreen = false; // If Not, Run In Windowed Mode
-      }
-    } else
-      enabler.fullscreen = false;
+  switch (conf.display().mode) {
+    case display_config::display_mode::text:
+      display.flag.add_flag(INIT_DISPLAY_FLAG_TEXT);
+      break;
+    case display_config::display_mode::software_2d:
+      display.flag.add_flag(INIT_DISPLAY_FLAG_2D);
+      break;
+    case display_config::display_mode::hardware_2d:
+      display.flag.add_flag(INIT_DISPLAY_FLAG_2D);
+      display.flag.add_flag(INIT_DISPLAY_FLAG_2DHW);
+      break;
+    case display_config::display_mode::asynchronous_2d:
+      display.flag.add_flag(INIT_DISPLAY_FLAG_2D);
+      display.flag.add_flag(INIT_DISPLAY_FLAG_2DHW);
+      display.flag.add_flag(INIT_DISPLAY_FLAG_2DASYNC);
+      break;
+    case display_config::display_mode::accumulation_buffer:
+      display.flag.add_flag(INIT_DISPLAY_FLAG_ACCUM_BUFFER);
+      break;
+    case display_config::display_mode::framebuffer:
+      display.flag.add_flag(INIT_DISPLAY_FLAG_FRAME_BUFFER);
+      break;
+    case display_config::display_mode::vertex_buffer_object:
+      display.flag.add_flag(INIT_DISPLAY_FLAG_VBO);
+      break;
+    case display_config::display_mode::shader:
+      display.flag.add_flag(INIT_DISPLAY_FLAG_SHADER);
+      break;
+    case display_config::display_mode::standard:
+    default:
+      break;
   }
-#endif
 
-  enabler.textures.load_multi_pdim(small_font, font.small_font_texpos, 16, 16, true, &font.small_font_dispx, &font.small_font_dispy);
-  enabler.textures.load_multi_pdim(large_font, font.large_font_texpos, 16, 16, true, &font.large_font_dispx, &font.large_font_dispy);
+  if (conf.display().use_single_buffer) {
+    display.flag.add_flag(INIT_DISPLAY_FLAG_SINGLE_BUFFER);
+  }
+  if (conf.texture().use_graphics) {
+    display.flag.add_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS);
+  }
+  if (conf.texture().add_black_spaces) {
+    display.flag.add_flag(INIT_DISPLAY_FLAG_BLACK_SPACE);
+  }
+  if (conf.display().use_partial_print) {
+    display.flag.add_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT);
+  }
+  if (conf.window().window_not_resizable) {
+    display.flag.add_flag(INIT_DISPLAY_FLAG_NOT_RESIZABLE);
+  }
+  if (conf.display().use_arb_sync) {
+    display.flag.add_flag(INIT_DISPLAY_FLAG_ARB_SYNC);
+  }
+  display.desired_fullscreen_height = conf.window().fullscreen_height;
+  display.desired_fullscreen_width = conf.window().fullscreen_width;
+  display.desired_windowed_height = conf.window().window_height;
+  display.desired_windowed_width = conf.window().window_width;
+  display.partial_print_count = conf.display().partial_print_count;
+  display.windowed = conf.window().fullscreen ? InitDisplayWindow::INIT_DISPLAY_WINDOW_FALSE : InitDisplayWindow::INIT_DISPLAY_WINDOW_TRUE;
+
+  if (conf.gameplay().disable_music) {
+    media.flag.add_flag(INIT_MEDIA_FLAG_SOUND_OFF);
+  }
+  if (conf.gameplay().disable_intro) {
+    media.flag.add_flag(INIT_MEDIA_FLAG_INTRO_OFF);
+  }
+  if (conf.gameplay().compress_saves) {
+    media.flag.add_flag(INIT_MEDIA_FLAG_COMPRESS_SAVES);
+  }
+  media.volume = conf.gameplay().music_volume;
+
+  if (conf.input().disable_mouse) {
+    input.flag.add_flag(INIT_INPUT_FLAG_MOUSE_OFF);
+  }
+  if (conf.texture().show_mouse) {
+    input.flag.add_flag(INIT_INPUT_FLAG_MOUSE_PICTURE);
+  }
+  input.hold_time = conf.input().key_hold_delay;
+  input.macro_time = conf.input().macro_step_delay;
+  input.pause_zoom_no_interface_ms = conf.input().recenter_interface_delay;
+  input.repeat_accel_limit = conf.input().key_repeat_acceleration_limit;
+  input.repeat_accel_start = conf.input().key_repeat_acceleration_start;
+  input.repeat_time = conf.input().key_repeat_delay;
+  input.zoom_speed = conf.input().zoom_speed;
+
+  font.use_ttf = conf.texture().use_true_type;
+
+  if (conf.window().keep_topmost) {
+    window.flag.add_flag(INIT_WINDOW_FLAG_TOPMOST);
+  }
+  if (conf.display().use_vsync) {
+    window.flag.add_flag(INIT_WINDOW_FLAG_VSYNC_ON);
+  } else {
+    window.flag.add_flag(INIT_WINDOW_FLAG_VSYNC_OFF);
+  }
+  if (conf.texture().use_linear_filtering) {
+    window.flag.add_flag(INIT_WINDOW_FLAG_TEXTURE_LINEAR);
+  }
+  // ------------------------------------------------------------------------------
+
+  gps.display_frames = conf.display().show_fps;
+  enabler.set_gfps(conf.display().fps_cap);
+  enabler.set_fps(conf.gameplay().fps_cap);
+
+  enabler.fullscreen = conf.window().fullscreen;
+
+  enabler.textures.load_multi_pdim(conf.texture().small_font_filename, font.small_font_texpos, 16, 16, true, &font.small_font_dispx, &font.small_font_dispy);
+  enabler.textures.load_multi_pdim(conf.texture().large_font_filename, font.large_font_texpos, 16, 16, true, &font.large_font_dispx, &font.large_font_dispy);
 
   // compute the desired window size, if set to auto
   if (display.desired_windowed_width < MAX_GRID_X && display.desired_windowed_height < MAX_GRID_Y) {

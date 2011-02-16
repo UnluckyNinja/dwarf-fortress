@@ -12,6 +12,8 @@
 #include "extern/init.hpp"
 #include "extern/graphics.hpp"
 
+#include "intern/config.hpp"
+
 #include <logging/logging.hpp>
 
 #include <cassert>
@@ -42,11 +44,13 @@ void renderer_partial::allocate(int tile_count) {
 }
 
 void renderer_partial::reshape_gl() {
+  config const& conf = config::instance();
+
   // TODO: This function is duplicate code w/base class reshape_gl
   // Setup invariant state
   glEnableClientState(GL_COLOR_ARRAY);
   /// Set up our coordinate system
-  if (forced_steps + zoom_steps == 0 && init.display.flag.has_flag(INIT_DISPLAY_FLAG_BLACK_SPACE)) {
+  if (forced_steps + zoom_steps == 0 && conf.texture().add_black_spaces) {
     size_x = gps.dimx * dispx;
     size_y = gps.dimy * dispy;
     off_x = (screen->w - size_x) / 2;
@@ -109,7 +113,10 @@ void renderer_partial::draw(int dummy) {
 }
 
 renderer_partial::renderer_partial() {
-  redraw_count = init.display.partial_print_count;
+  config const& conf = config::instance();
+
+  redraw_count = conf.display().partial_print_count;
+
   buffersz = 2048;
   renderer_opengl::allocate(buffersz);
   current_erasz = head = tail = sum_erasz = 0;

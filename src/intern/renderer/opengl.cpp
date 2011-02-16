@@ -15,6 +15,7 @@
 #include "intern/texture/full_id.hpp"
 
 #include "intern/utils/numbers.hpp"
+#include "intern/config.hpp"
 
 #include <SDL_image.h>
 
@@ -23,6 +24,8 @@ bool renderer_opengl::uses_opengl() {
 }
 
 bool renderer_opengl::init_video(int w, int h) {
+  config const& conf = config::instance();
+
   // Get ourselves an opengl-enabled SDL window
   uint32_t flags = SDL_HWSURFACE | SDL_OPENGL;
 
@@ -30,13 +33,14 @@ bool renderer_opengl::init_video(int w, int h) {
   if (enabler.is_fullscreen()) {
     flags |= SDL_FULLSCREEN;
   } else {
-    if (!init.display.flag.has_flag(INIT_DISPLAY_FLAG_NOT_RESIZABLE))
+    if (!conf.window().window_not_resizable) {
       flags |= SDL_RESIZABLE;
+    }
   }
 
   // Setup OpenGL attributes
-  SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, init.window.flag.has_flag(INIT_WINDOW_FLAG_VSYNC_ON));
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, init.display.flag.has_flag(INIT_DISPLAY_FLAG_SINGLE_BUFFER) ? 0 : 1);
+  SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, conf.display().use_vsync);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, conf.display().use_single_buffer);
 
   // (Re)create the window
   screen = SDL_SetVideoMode(w, h, 32, flags);
@@ -47,24 +51,22 @@ bool renderer_opengl::init_video(int w, int h) {
   // Test double-buffering status
   int test;
   SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &test);
-  if (test != ((init.display.flag.has_flag(INIT_DISPLAY_FLAG_SINGLE_BUFFER)) ? 0 : 1)) {
-    if (enabler.is_fullscreen())
-      ;
-      //errorlog << "Requested single-buffering not available\n" << flush;
-else
+  if (test != (conf.display().use_single_buffer ? 0 : 1)) {
+    if (!enabler.is_fullscreen()) {
       __errorM(opengl) << "Requested single-buffering not available";
     }
-
-    // (Re)initialize GLEW. Technically only needs to be done once on
-    // linux, but on windows forgetting will cause crashes.
-    glewInit();
-
-    // Set the viewport and clear
-    glViewport(0, 0, screen->w, screen->h);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    return true;
   }
+
+  // (Re)initialize GLEW. Technically only needs to be done once on
+  // linux, but on windows forgetting will cause crashes.
+  glewInit();
+
+  // Set the viewport and clear
+  glViewport(0, 0, screen->w, screen->h);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  return true;
+}
 
 void renderer_opengl::write_tile_vertexes(GLfloat x, GLfloat y, GLfloat *vertex) {
   vertex[0] = x; // Upper left
@@ -177,8 +179,10 @@ void renderer_opengl::update_all() {
 }
 
 void renderer_opengl::render() {
+  config const& conf = config::instance();
+
   draw(gps.dimx * gps.dimy * 6);
-  if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_ARB_SYNC) && GL_ARB_sync) {
+  if (conf.display().use_arb_sync && GL_ARB_sync) {
     assert(enabler.sync == NULL);
     enabler.sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
   }
@@ -219,14 +223,12 @@ renderer_opengl::renderer_opengl() {
   // Fallback to windowed mode if fullscreen fails
   if (!worked && enabler.is_fullscreen()) {
     enabler.fullscreen = false;
-    __errorM(sdl)
-      << "SDL initialization failure, trying windowed mode " << SDL_GetError();
+    __errorM(sdl) << "SDL initialization failure, trying windowed mode " << SDL_GetError();
     worked = init_video(init.display.desired_windowed_width, init.display.desired_windowed_height);
   }
   // Quit if windowed fails
   if (!worked) {
-    __errorM(sdl)
-      << "SDL initialization failure" << SDL_GetError();
+    __errorM(sdl) << "SDL initialization failure" << SDL_GetError();
     exit(EXIT_FAILURE);
   }
 
@@ -235,14 +237,16 @@ renderer_opengl::renderer_opengl() {
 }
 
 void renderer_opengl::zoom(zoom_commands cmd) {
+  input_config const& conf = config::instance().input();
+
   ::std::pair< int, int > before = compute_zoom(true);
   int before_steps = zoom_steps;
   switch (cmd) {
     case zoom_in:
-      zoom_steps -= init.input.zoom_speed;
+      zoom_steps -= conf.zoom_speed;
       break;
     case zoom_out:
-      zoom_steps += init.input.zoom_speed;
+      zoom_steps += conf.zoom_speed;
       break;
     case zoom_reset:
       zoom_steps = 0;
@@ -315,6 +319,8 @@ bool renderer_opengl::get_mouse_coords(int &x, int &y) {
 }
 
 void renderer_opengl::reshape_gl() {
+  config const& conf = config::instance();
+
   // Allocate array memory
   allocate(gps.dimx * gps.dimy);
   // Initialize the vertex array
@@ -325,7 +331,7 @@ void renderer_opengl::reshape_gl() {
   // Setup invariant state
   glEnableClientState(GL_COLOR_ARRAY);
   /// Set up our coordinate system
-  if (forced_steps + zoom_steps == 0 && init.display.flag.has_flag(INIT_DISPLAY_FLAG_BLACK_SPACE)) {
+  if (forced_steps + zoom_steps == 0 && conf.texture().add_black_spaces) {
     size_x = gps.dimx * dispx;
     size_y = gps.dimy * dispy;
     off_x = (screen->w - size_x) / 2;

@@ -34,6 +34,7 @@
 #include "intern/renderer/opengl.hpp"
 
 #include "intern/utils/numbers.hpp"
+#include "intern/config.hpp"
 
 #include <logging/logging.hpp>
 
@@ -1058,6 +1059,8 @@ void render_things() {
  */
 
 void enablerst::eventLoop_SDL() {
+  config const& conf = config::instance();
+
   sdl_event_t event;
   const SDL_Surface *screen = SDL_GetVideoSurface();
   uint32_t mouse_lastused = 0;
@@ -1119,7 +1122,7 @@ void enablerst::eventLoop_SDL() {
         case SDL_KEYDOWN:
           // Disable mouse if it's been long enough
           if (mouse_lastused + 5000 < now) {
-            if (init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_PICTURE)) {
+            if (conf.texture().show_mouse) {
               // hide the mouse picture
               // enabler.set_tile(0, TEXTURE_MOUSE, enabler.mouse_x, enabler.mouse_y);
             }
@@ -1131,7 +1134,7 @@ void enablerst::eventLoop_SDL() {
           break;
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
-          if (!init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_OFF)) {
+          if (!conf.input().disable_mouse) {
             int isdown = (event.type == SDL_MOUSEBUTTONDOWN);
             if (event.button.button == SDL_BUTTON_LEFT) {
               enabler.mouse_lbut = isdown;
@@ -1150,7 +1153,7 @@ void enablerst::eventLoop_SDL() {
         case SDL_MOUSEMOTION:
           // Deal with the mouse hiding bit
           mouse_lastused = now;
-          if (init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_PICTURE)) {
+          if (conf.texture().show_mouse) {
             // turn on mouse picture
             // enabler.set_tile(gps.tex_pos[TEXTURE_MOUSE], TEXTURE_MOUSE,enabler.mouse_x, enabler.mouse_y);
           } else {
@@ -1183,7 +1186,7 @@ void enablerst::eventLoop_SDL() {
     } //while have event
 
     // Update mouse state
-    if (!init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_OFF)) {
+    if (!conf.input().disable_mouse) {
       int mouse_x = -1, mouse_y = -1, mouse_state;
       // Check whether the renderer considers this valid input or not, and write it to gps
       if ((SDL_GetAppState() & SDL_APPMOUSEFOCUS) && renderer->get_mouse_coords(mouse_x, mouse_y)) {
@@ -1344,6 +1347,8 @@ enablerst::enablerst() {
 }
 
 int enablerst::loop(::std::string cmdline) {
+  display_config const& display = config::instance().display();
+
   command_line = cmdline;
 
   // Initialize the tick counters
@@ -1351,44 +1356,104 @@ int enablerst::loop(::std::string cmdline) {
   set_gputicks(0);
 
   // Call DF's initialization routine
-  if (!beginroutine())
+  if (!beginroutine()) {
     exit(EXIT_FAILURE);
+  }
 
-  // Allocate a renderer
-  if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT)) {
+  switch (display.mode) {
 #ifdef CURSES
+    case display_config::display_mode::text:
     renderer = new renderer_curses();
+    break;
 #else
-    __error
-      << "TEXT not supported on windows";
-    exit(EXIT_FAILURE);
+    case display_config::display_mode::text:
+      __error
+        << "text renderer not supported, falling back to 2d renderer.";
+      renderer = new renderer_2d();
+      break;
 #endif
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_2D)) {
-    renderer = new renderer_2d();
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_ACCUM_BUFFER)) {
-    renderer = new renderer_accum_buffer();
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_FRAME_BUFFER)) {
-    renderer = new renderer_framebuffer();
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT)) {
-    if (init.display.partial_print_count)
-      renderer = new renderer_partial();
-    else
-      renderer = new renderer_once();
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_VBO)) {
-    renderer = new renderer_vbo();
-  } else {
-    renderer = new renderer_opengl();
+    case display_config::display_mode::software_2d:
+    case display_config::display_mode::hardware_2d:
+    case display_config::display_mode::asynchronous_2d:
+      renderer = new renderer_2d();
+      break;
+    case display_config::display_mode::accumulation_buffer:
+      renderer = new renderer_accum_buffer();
+      break;
+    case display_config::display_mode::framebuffer:
+      renderer = new renderer_framebuffer();
+      break;
+    case display_config::display_mode::vertex_buffer_object:
+      renderer = new renderer_vbo();
+      break;
+    case display_config::display_mode::shader:
+      renderer = new renderer_opengl();
+      break;
+    case display_config::display_mode::standard:
+    default:
+      if (display.use_partial_print) {
+        if (display.partial_print_count > 0) {
+          renderer = new renderer_partial();
+        } else {
+          renderer = new renderer_once();
+        }
+      } else {
+        renderer = new renderer_opengl();
+      }
   }
 
-  // At this point we should have a window that is setup to render DF.
-  if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT)) {
+  switch (display.mode) {
 #ifdef CURSES
+    case display_config::display_mode::text:
     eventLoop_ncurses();
+    break;
+#else
+    case display_config::display_mode::text:
 #endif
-  } else {
-    SDL_EnableUNICODE(1);
-    eventLoop_SDL();
+    case display_config::display_mode::software_2d:
+    case display_config::display_mode::hardware_2d:
+    case display_config::display_mode::asynchronous_2d:
+    case display_config::display_mode::accumulation_buffer:
+    case display_config::display_mode::framebuffer:
+    case display_config::display_mode::vertex_buffer_object:
+    case display_config::display_mode::shader:
+    case display_config::display_mode::standard:
+    default:
+      SDL_EnableUNICODE(1);
+      eventLoop_SDL();
+      break;
   }
+
+  //  // Allocate a renderer
+  //  if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT)) {
+  //#ifdef CURSES
+  //    renderer = new renderer_curses();
+  //#else
+  //    __error
+  //      << "TEXT not supported on windows";
+  //    exit(EXIT_FAILURE);
+  //#endif
+  //  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_2D)) {
+  //    renderer = new renderer_2d();
+  //  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_ACCUM_BUFFER)) {
+  //    renderer = new renderer_accum_buffer();
+  //  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_FRAME_BUFFER)) {
+  //    renderer = new renderer_framebuffer();
+  //  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT)) {
+  //    //    if (init.display.partial_print_count)
+  //    //      renderer = new renderer_partial();
+  //    //    else
+  //    //      renderer = new renderer_once();
+  //    if (config::instance().display().use_partial_print) {
+  //      renderer = new renderer_partial();
+  //    } else {
+  //      renderer = new renderer_once();
+  //    }
+  //  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_VBO)) {
+  //    renderer = new renderer_vbo();
+  //  } else {
+  //    renderer = new renderer_opengl();
+  //  }
 
   endroutine();
 

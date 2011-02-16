@@ -11,6 +11,7 @@
 #include "extern/init.hpp"
 
 #include "intern/texture/full_id.hpp"
+#include "intern/config.hpp"
 
 #include <cassert>
 
@@ -70,6 +71,8 @@ void renderer::gps_allocate(int x, int y) {
 }
 
 Either< texture_fullid, texture_ttfid > renderer::screen_to_texid(int x, int y) {
+  config const& conf = config::instance();
+
   const int tile = x * gps.dimy + y;
 
   const unsigned char *s = screen + tile * 4;
@@ -88,7 +91,7 @@ Either< texture_fullid, texture_ttfid > renderer::screen_to_texid(int x, int y) 
   const int fg = (s[1] + bold) % 16;
   const int bg = s[2] % 16;
 
-  static bool use_graphics = init.display.flag.has_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS);
+  static bool use_graphics = conf.texture().use_graphics;
 
   if (use_graphics) {
     const long texpos = screentexpos[tile];
@@ -130,9 +133,11 @@ Either< texture_fullid, texture_ttfid > renderer::screen_to_texid(int x, int y) 
 }
 
 void renderer::display() {
+  config const& conf = config::instance();
+
   const int dimx = init.display.grid_x;
   const int dimy = init.display.grid_y;
-  static bool use_graphics = init.display.flag.has_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS);
+  static bool use_graphics = conf.texture().use_graphics;
   if (gps.force_full_display_count) {
     // Update the entire screen
     update_all();

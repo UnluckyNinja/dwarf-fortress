@@ -12,6 +12,9 @@ struct file_compressorst;
 class flagarrayst {
   public:
     flagarrayst();
+    /**
+     * @ingroup hidden
+     */
     ~flagarrayst();
 
     void set_size_on_flag_num(long flagnum);
@@ -19,15 +22,8 @@ class flagarrayst {
     void clear_all();
 
     void copy_from(flagarrayst &src);
-
-    /**
-     * @ingroup hidden
-     */
     bool has_flag(long checkflag);
 
-    /**
-     * @ingroup hidden
-     */
     void add_flag(long checkflag);
     void toggle_flag(long checkflag);
     void remove_flag(long checkflag);

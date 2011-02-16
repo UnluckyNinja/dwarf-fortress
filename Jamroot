@@ -49,6 +49,7 @@ project libgraphics : requirements
   <include>../liblogging/include/
   <variant>coverage:<library>gcov
   <threading>multi
+  <include>/usr/local/include/
   <include>g_src/glext/
   <include>include/
   <cflags>"`pkg-config --cflags gtk+-2.0`"
@@ -117,5 +118,5 @@ lib GLEW32
 #    : <location>./dist/ ;
 
 install libs_dist
-    : graphics GLEW32
+    : graphics GLEW32 /liblogging//logging
     : <location>./dist/ ;

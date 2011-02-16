@@ -17,6 +17,7 @@
 #include "intern/ttf_manager.hpp"
 
 #include "intern/i18n.hpp"
+#include "intern/config.hpp"
 
 #include <cstring>
 
@@ -39,7 +40,8 @@ void graphicst::addcoloredst(const char *str, const char *colorstr) {
 
 void graphicst::addst(const ::std::string &str, justification just) {
   ::i18n::out << str;
-  if (just == justify_cont) just = justify_left;
+  if (just == justify_cont)
+    just = justify_left;
   if (just != not_truetype && ttf_manager.was_init()) {
     struct ttf_id id = { str, screenf, screenb, screenbright, just };
     ::std::pair< int, int > handleAndWidth = ttf_manager.get_handle(id);
@@ -48,15 +50,15 @@ void graphicst::addst(const ::std::string &str, justification just) {
     int ourx;
     // cout << str.size() << " " << width << endl;
     switch (just) {
-    case justify_center:
-      ourx = screenx + (str.size() - width) / 2;
-      break;
-    case justify_right:
-      ourx = screenx + (str.size() - width);
-      break;
-    default:
-      ourx = screenx;
-      break;
+      case justify_center:
+        ourx = screenx + (str.size() - width) / 2;
+        break;
+      case justify_right:
+        ourx = screenx + (str.size() - width);
+        break;
+      default:
+        ourx = screenx;
+        break;
     }
     unsigned char * const s = screen + ourx * dimy * 4 + screeny * 4;
     s[0] = (handle >> 16) & 0xff;
@@ -65,9 +67,9 @@ void graphicst::addst(const ::std::string &str, justification just) {
     s[3] = GRAPHICSTYPE_TTF;
     // Also set the other tiles this text covers
     for (int x = 1; x < width; ++x) {
-      *(s + x*dimy*4 + 0) = (handle >> 16) & 0xff;
-      *(s + x*dimy*4 + 1) = (handle >> 8) & 0xff;
-      *(s + x*dimy*4 + 2) = handle & 0xff;
+      *(s + x * dimy * 4 + 0) = (handle >> 16) & 0xff;
+      *(s + x * dimy * 4 + 1) = (handle >> 8) & 0xff;
+      *(s + x * dimy * 4 + 2) = handle & 0xff;
       *(s + x * dimy * 4 + 3) = GRAPHICSTYPE_TTFCONT;
     }
     screenx = ourx + width;
@@ -75,8 +77,8 @@ void graphicst::addst(const ::std::string &str, justification just) {
 
     for (::std::size_t s = 0; s < str.length() && screenx < init.display.grid_x; s++) {
       if (screenx < 0) {
-        s-=screenx;
-        screenx=0;
+        s -= screenx;
+        screenx = 0;
         if (s >= str.length())
           break;
       }
@@ -132,8 +134,10 @@ void graphicst::add_tile_grayscale(long texp, char cf, char cbr) {
 }
 
 void graphicst::prepare_graphics(::std::string &src_dir) {
-  if (!init.display.flag.has_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS))
+  config const& conf = config::instance();
+  if (conf.texture().use_graphics) {
     return;
+  }
 
   texture.clean();
 

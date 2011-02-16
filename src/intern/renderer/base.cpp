@@ -17,6 +17,7 @@
 #include "intern/ttf_manager.hpp"
 
 #include "intern/utils/numbers.hpp"
+#include "intern/config.hpp"
 
 #include "meta/either.hpp"
 
@@ -43,7 +44,7 @@ SDL_Surface* renderer_2d_base::tile_cache_lookup(texture_fullid &id) {
     uint32_t color_bgi = SDL_MapRGB(color->format, id.br * 255, id.bg * 255, id.bb * 255);
     uint8_t *color_bg = (uint8_t*) &color_bgi;
     SDL_LockSurface(tex);
-    SDL_LockSurface( color);
+    SDL_LockSurface(color);
 
     uint8_t *pixel_src, *pixel_dst;
     for (int y = 0; y < tex->h; y++) {
@@ -70,16 +71,29 @@ SDL_Surface* renderer_2d_base::tile_cache_lookup(texture_fullid &id) {
 }
 
 bool renderer_2d_base::init_video(int w, int h) {
+  config const& conf = config::instance();
+
   // Get ourselves a 2D SDL window
-  uint32_t flags = init.display.flag.has_flag(INIT_DISPLAY_FLAG_2DHW) ? SDL_HWSURFACE : SDL_SWSURFACE;
-  flags |= init.display.flag.has_flag(INIT_DISPLAY_FLAG_2DASYNC) ? SDL_ASYNCBLIT : 0;
+  uint32_t flags;
+  switch (conf.display().mode) {
+    case display_config::display_mode::software_2d:
+      flags = SDL_SWSURFACE;
+    case display_config::display_mode::hardware_2d:
+      flags = SDL_HWSURFACE;
+    case display_config::display_mode::asynchronous_2d:
+      flags = SDL_HWSURFACE;
+      flags |= SDL_ASYNCBLIT;
+    default:
+      break;
+  }
 
   // Set it up for windowed or fullscreen, depending.
   if (enabler.is_fullscreen()) {
     flags |= SDL_FULLSCREEN;
   } else {
-    if (!init.display.flag.has_flag(INIT_DISPLAY_FLAG_NOT_RESIZABLE))
+    if (!conf.window().window_not_resizable) {
       flags |= SDL_RESIZABLE;
+    }
   }
 
   // (Re)create the window
@@ -262,14 +276,16 @@ bool renderer_2d_base::get_mouse_coords(int &x, int &y) {
 }
 
 void renderer_2d_base::zoom(zoom_commands cmd) {
+  input_config const& conf = config::instance().input();
+
   ::std::pair< int, int > before = compute_zoom(true);
   int before_steps = zoom_steps;
   switch (cmd) {
     case zoom_in:
-      zoom_steps -= init.input.zoom_speed;
+      zoom_steps -= conf.zoom_speed;
       break;
     case zoom_out:
-      zoom_steps += init.input.zoom_speed;
+      zoom_steps += conf.zoom_speed;
       break;
     case zoom_reset:
       zoom_steps = 0;

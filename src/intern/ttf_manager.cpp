@@ -10,6 +10,7 @@
 #include "extern/init.hpp"
 #include "extern/utils/strings.hpp"
 #include "hidden/global.hpp"
+#include "intern/config.hpp"
 
 #include <logging/logging.hpp>
 
