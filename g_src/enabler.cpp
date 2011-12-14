@@ -1,9 +1,3 @@
-#ifdef __APPLE__
-# include "osx_messagebox.h"
-#elif defined(unix)
-# include <gtk/gtk.h>
-#endif
-
 #include <cassert>
 
 #include "platform.h"
@@ -25,7 +19,7 @@ enablerst enabler;
 int glerrorcount = 0;
 
 // Set to 0 when the game wants to quit
-static int loopvar = 1;
+int loopvar = 1;
 
 // Reports an error to the user, using a MessageBox and stderr.
 void report_error(const char *error_preface, const char *error_message)
@@ -56,9 +50,9 @@ Either<texture_fullid,texture_ttfid> renderer::screen_to_texid(int x, int y) {
   const int bold = (s[3] != 0) * 8;
   const int fg   = (s[1] + bold) % 16;
   const int bg   = s[2] % 16;
-  
+
   static bool use_graphics = init.display.flag.has_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS);
-  
+
   if (use_graphics) {
     const long texpos             = screentexpos[tile];
     const char addcolor           = screentexpos_addcolor[tile];
@@ -84,7 +78,7 @@ Either<texture_fullid,texture_ttfid> renderer::screen_to_texid(int x, int y) {
       goto skip_ch;
     }
   }
-  
+
   ret.texpos = enabler.is_fullscreen() ?
     init.font.large_font_texpos[ch] :
     init.font.small_font_texpos[ch];
@@ -100,13 +94,6 @@ Either<texture_fullid,texture_ttfid> renderer::screen_to_texid(int x, int y) {
 
   return Either<texture_fullid,texture_ttfid>(ret);
 }
-
-
-#ifdef CURSES
-# include "renderer_curses.cpp"
-#endif
-#include "renderer_2d.hpp"
-#include "renderer_opengl.hpp"
 
 
 enablerst::enablerst() {
@@ -176,7 +163,7 @@ void renderer::gps_allocate(int x, int y) {
   if (screentexpos_grayscale_old) delete[] screentexpos_grayscale_old;
   if (screentexpos_cf_old) delete[] screentexpos_cf_old;
   if (screentexpos_cbr_old) delete[] screentexpos_cbr_old;
-  
+
   gps.screen = screen = new unsigned char[x*y*4];
   memset(screen, 0, x*y*4);
   gps.screentexpos = screentexpos = new long[x*y];
@@ -270,73 +257,6 @@ void enablerst::async_wait() {
   }
 }
 
-void enablerst::async_loop() {
-  async_paused = false;
-  async_frames = 0;
-  int total_frames = 0;
-  int fps = 100; // Just a thread-local copy
-  for (;;) {
-    // cout << "FRAMES: " << frames << endl;
-    // Check for commands
-    async_cmd cmd;
-    bool have_cmd = true;
-    do {
-      if (async_paused || (async_frames == 0 && !(enabler.flag & ENABLERFLAG_MAXFPS)))
-        async_tobox.read(cmd);
-      else
-        have_cmd = async_tobox.try_read(cmd);
-      // Obey the command, would you kindly.
-      if (have_cmd) {
-        switch (cmd.cmd) {
-        case async_cmd::pause:
-          async_paused = true;
-          // puts("Paused");
-          async_frombox.write(async_msg(async_msg::complete));
-          break;
-        case async_cmd::start:
-          async_paused = false;
-          async_frames = 0;
-          // puts("UNpaused");
-          break;
-        case async_cmd::render:
-          if (flag & ENABLERFLAG_RENDER) {
-            total_frames++;
-            renderer->swap_arrays();
-            if (total_frames % 1800 == 0)
-              ttf_manager.gc();
-            render_things();
-            flag &= ~ENABLERFLAG_RENDER;
-            update_gfps();
-          }
-          async_frombox.write(async_msg(async_msg::complete));
-          break;
-        case async_cmd::inc:
-          async_frames += cmd.val;
-          if (async_frames > fps*3) async_frames = fps*3; // Just in case
-          break;
-        case async_cmd::set_fps:
-          fps = cmd.val;
-          break;
-        }
-      }
-    } while (have_cmd);
-    // Run the main-loop, maybe
-    if (!async_paused && (async_frames || (enabler.flag & ENABLERFLAG_MAXFPS))) {
-      if (mainloop()) {
-        async_frombox.write(async_msg(async_msg::quit));
-        return; // We're done.
-      }
-      simticks.lock();
-      simticks.val++;
-      simticks.unlock();
-      async_frames--;
-      if (async_frames < 0) async_frames = 0;
-      update_fps();
-    }
-    SDL_NumJoysticks(); // Hook for dfhack
-  }
-}
-
 void enablerst::do_frame() {
   // Check how long it's been, exactly
   const Uint32 now = SDL_GetTicks();
@@ -351,7 +271,7 @@ void enablerst::do_frame() {
     outstanding_gframes = 3;
   }
   // cout << outstanding_frames << " " << outstanding_gframes << endl;
- 
+
   // Update the loop's tick-counter suitably
   if (outstanding_frames >= 1) {
     async_cmd cmd(async_cmd::inc);
@@ -386,196 +306,6 @@ void enablerst::do_frame() {
     // cout << milliseconds << endl;
     SDL_Delay(milliseconds);
   }
-}
-
-void enablerst::eventLoop_SDL()
-{
-  
-  SDL_Event event;
-  const SDL_Surface *screen = SDL_GetVideoSurface();
-  Uint32 mouse_lastused = 0;
-  SDL_ShowCursor(SDL_DISABLE);
- 
-  // Initialize the grid
-  renderer->resize(screen->w, screen->h);
-
-  while (loopvar) {
-    Uint32 now = SDL_GetTicks();
-    bool paused_loop = false;
-
-    // Check for zoom commands
-    zoom_commands zoom;
-    while (async_zoom.try_read(zoom)) {
-      if (overridden_grid_sizes.size())
-        continue; // No zooming in movies
-      if (!paused_loop) {
-        pause_async_loop();
-        paused_loop = true;
-      }
-      if (zoom == zoom_fullscreen)
-        renderer->set_fullscreen();
-      else
-        renderer->zoom(zoom);
-    }
-
-    // Check for SDL events
-    while (SDL_PollEvent(&event)) {
-      // Make sure mainloop isn't running while we're processing input
-      if (!paused_loop) {
-        pause_async_loop();
-        paused_loop = true;
-      }
-      // Handle SDL events
-      switch (event.type) {
-      case SDL_KEYDOWN:
-        // Disable mouse if it's been long enough
-        if (mouse_lastused + 5000 < now) {
-          if(init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_PICTURE)) {
-            // hide the mouse picture
-            // enabler.set_tile(0, TEXTURE_MOUSE, enabler.mouse_x, enabler.mouse_y);
-          }
-          SDL_ShowCursor(SDL_DISABLE);
-        }
-      case SDL_KEYUP:
-      case SDL_QUIT:
-        enabler.add_input(event, now);
-        break;
-      case SDL_MOUSEBUTTONDOWN:
-      case SDL_MOUSEBUTTONUP:
-        if (!init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_OFF)) {
-          int isdown = (event.type == SDL_MOUSEBUTTONDOWN);
-          if (event.button.button == SDL_BUTTON_LEFT) {
-            enabler.mouse_lbut = isdown;
-            enabler.mouse_lbut_down = isdown;
-            if (!isdown)
-              enabler.mouse_lbut_lift = 0;
-          } else if (event.button.button == SDL_BUTTON_RIGHT) {
-            enabler.mouse_rbut = isdown;
-            enabler.mouse_rbut_down = isdown;
-            if (!isdown)
-              enabler.mouse_rbut_lift = 0;
-          } else
-            enabler.add_input(event, now);
-        }
-        break;
-      case SDL_MOUSEMOTION:
-        // Deal with the mouse hiding bit
-        mouse_lastused = now;
-        if(init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_PICTURE)) {
-          // turn on mouse picture
-          // enabler.set_tile(gps.tex_pos[TEXTURE_MOUSE], TEXTURE_MOUSE,enabler.mouse_x, enabler.mouse_y);
-        } else {
-          SDL_ShowCursor(SDL_ENABLE);
-        }
-        break;
-      case SDL_ACTIVEEVENT:
-        enabler.clear_input();
-        if (event.active.state & SDL_APPACTIVE) {
-          if (event.active.gain) {
-            enabler.flag|=ENABLERFLAG_RENDER;
-            gps.force_full_display_count++;
-          }
-        }
-        break;
-      case SDL_VIDEOEXPOSE:
-        gps.force_full_display_count++;
-        enabler.flag|=ENABLERFLAG_RENDER;
-        break;
-      case SDL_VIDEORESIZE:
-        if (is_fullscreen());
-          //errorlog << "Caught resize event in fullscreen??\n";
-        else {
-          //gamelog << "Resizing window to " << event.resize.w << "x" << event.resize.h << endl << flush;
-          renderer->resize(event.resize.w, event.resize.h);
-        }
-        break;
-      } // switch (event.type)
-    } //while have event
-
-    // Update mouse state
-    if (!init.input.flag.has_flag(INIT_INPUT_FLAG_MOUSE_OFF)) {
-      int mouse_x = -1, mouse_y = -1, mouse_state;
-      // Check whether the renderer considers this valid input or not, and write it to gps
-      if ((SDL_GetAppState() & SDL_APPMOUSEFOCUS) &&
-          renderer->get_mouse_coords(mouse_x, mouse_y)) {
-        mouse_state = 1;
-      } else {
-        mouse_state = 0;
-      }
-      if (mouse_x != gps.mouse_x || mouse_y != gps.mouse_y ||
-          mouse_state != enabler.tracking_on) {
-        // Pause rendering loop and update values
-        if (!paused_loop) {
-          pause_async_loop();
-          paused_loop = true;
-        }
-        enabler.tracking_on = mouse_state;
-        gps.mouse_x = mouse_x;
-        gps.mouse_y = mouse_y;
-      }
-    }
-
-    if (paused_loop)
-      unpause_async_loop();
-
-    do_frame();
-#if !defined(NO_FMOD)
-    // Call FMOD::System.update(). Manages a bunch of sound stuff.
-    musicsound.update();
-#endif
-  }
-}
-
-int enablerst::loop(string cmdline) {
-  command_line = cmdline;
-
-  // Initialize the tick counters
-  simticks.write(0);
-  gputicks.write(0);
-  
-  // Call DF's initialization routine
-  if (!beginroutine())
-    exit(EXIT_FAILURE);
-  
-  // Allocate a renderer
-  if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT)) {
-#ifdef CURSES
-    renderer = new renderer_curses();
-#else
-    report_error("PRINT_MODE","TEXT not supported on windows");
-    exit(EXIT_FAILURE);
-#endif
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_2D)) {
-    renderer = new renderer_2d();
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_ACCUM_BUFFER)) {
-    renderer = new renderer_accum_buffer();
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_FRAME_BUFFER)) {
-    renderer = new renderer_framebuffer();
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_PARTIAL_PRINT)) {
-    if (init.display.partial_print_count)
-      renderer = new renderer_partial();
-    else
-      renderer = new renderer_once();
-  } else if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_VBO)) {
-    renderer = new renderer_vbo();
-  } else {
-    renderer = new renderer_opengl();
-  }
-
-  // At this point we should have a window that is setup to render DF.
-  if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT)) {
-#ifdef CURSES
-    eventLoop_ncurses();
-#endif
-  } else {
-    SDL_EnableUNICODE(1);
-    eventLoop_SDL();
-  }
-
-  endroutine();
-
-  // Clean up graphical resources
-  delete renderer;
 }
 
 void enablerst::override_grid_size(int x, int y) {
@@ -690,91 +420,6 @@ void enablerst::set_gfps(int gfps) {
   }
 }
 
-int call_loop(void *dummy) {
-  enabler.async_loop();
-  return 0;
-}
-
-int main (int argc, char* argv[]) {
-#ifdef unix
-  setlocale(LC_ALL, "");
-#endif
-#if !defined(__APPLE__) && defined(unix)
-  bool gtk_ok = false;
-  if (getenv("DISPLAY"))
-    gtk_ok = gtk_init_check(&argc, &argv);
-#endif
-
-  // Initialise minimal SDL subsystems.
-  int retval = SDL_Init(SDL_INIT_TIMER);
-  // Report failure?
-  if (retval != 0) {
-    report_error("SDL initialization failure", SDL_GetError());
-    return false;
-  }
-  enabler.renderer_threadid = SDL_ThreadID();
-
-  // Spawn simulation thread
-  SDL_CreateThread(call_loop, NULL);
-
-  init.begin(); // Load init.txt settings
-  
-#if !defined(__APPLE__) && defined(unix)
-  if (!gtk_ok && !init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT)) {
-    puts("Display not found and PRINT_MODE not set to TEXT, aborting.");
-    exit(EXIT_FAILURE);
-  }
-  if (init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT) &&
-      init.display.flag.has_flag(INIT_DISPLAY_FLAG_USE_GRAPHICS)) {
-    puts("Graphical tiles are not compatible with text output, sorry");
-    exit(EXIT_FAILURE);
-  }
-#endif
-
-  // Initialize video, if we /use/ video
-  retval = SDL_InitSubSystem(init.display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT) ? 0 : SDL_INIT_VIDEO);
-  if (retval != 0) {
-    report_error("SDL initialization failure", SDL_GetError());
-    return false;
-  }
-  
-#ifdef linux
-  if (!init.media.flag.has_flag(INIT_MEDIA_FLAG_SOUND_OFF)) {
-    // Initialize OpenAL
-    if (!musicsound.initsound()) {
-      puts("Initializing OpenAL failed, no sound will be played");
-      init.media.flag.add_flag(INIT_MEDIA_FLAG_SOUND_OFF);
-    }
-  }
-#endif
-
-#ifdef WIN32
-  // Attempt to get as good a timer as possible
-  int ms = 1;
-  while (timeBeginPeriod(ms) != TIMERR_NOERROR) ms++;
-#endif
-
-  // Load keyboard map
-  keybinding_init();
-  enabler.load_keybindings("data/init/interface.txt");
-
-  string cmdLine;
-  for (int i = 1; i < argc; ++i) { 
-    char *option = argv[i];
-    cmdLine += option;
-    cmdLine += " ";
-  }
-  int result = enabler.loop(cmdLine);
-
-  SDL_Quit();
-
-#ifdef WIN32
-  timeEndPeriod(ms);
-#endif
-  
-  return result;
-}
-
 char get_slot_and_addbit_uchar(unsigned char &addbit,long &slot,long checkflag,long slotnum)
 {
   if(checkflag<0)return 0;
@@ -840,13 +485,13 @@ void text_system_file_infost::get_text(text_infost &text)
 
 	  text_info_elementst *newel;
 	  long end=str.length();
-			
+
 	  while(end>0)
 	    {
 	      if(isspace(str[end-1]))end--;
 	      else break;
 	    }
-			
+
 	  str.resize(end);
 
 	  for(curpos=0;curpos<end;curpos++)

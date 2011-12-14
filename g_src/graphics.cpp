@@ -106,7 +106,7 @@ void graphicst::addcoloredst(const char *str,const char *colorstr)
           screenx=0;
           if (s >= slen) break;
         }
-      
+
       changecolor((colorstr[s] & 7),((colorstr[s] & 56))>>3,((colorstr[s] & 64))>>6);
       addchar(str[s]);
     }
@@ -184,7 +184,7 @@ void graphicst::erasescreen_clip()
 }
 
 void graphicst::erasescreen_rect(int x1, int x2, int y1, int y2)
-{ 
+{
   changecolor(0,0,0);
   for (int x = x1; x <= x2; x++) {
     for (int y = y1; y <= y2; y++) {
@@ -439,10 +439,10 @@ void render_things()
   //GRAB CURRENT SCREEN AT THE END OF THE LIST
   viewscreenst *currentscreen=&gview.view;
   while(currentscreen->child!=NULL)currentscreen=currentscreen->child;
-  
+
   //NO INTERFACE LEFT, LEAVE
   if(currentscreen==&gview.view)return;
-  
+
   if(currentscreen->breakdownlevel==INTERFACE_BREAKDOWN_NONE)
 	{
 	currentscreen->render();

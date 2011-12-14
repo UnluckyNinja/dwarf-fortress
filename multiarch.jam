@@ -1,5 +1,7 @@
-# Distributed under the Boost Software License, Version 1.0.
-# See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt
+# Copyright (c) 2008, Svein Ove Aas, parts by Tarn Adams, portions Bernard
+# Helyer, packaging and cleanup bits by Beren Minor. All rights reserved
+#
+# See accompanying file README.rst
 
 # Provides mechanism for installing whole packages into a specific directory
 # structure. This is opposed to the 'install' rule, that installs a number of

@@ -733,7 +733,7 @@ struct gl_texpos {
 struct ttf_id {
   std::string text;
   unsigned char fg, bg, bold;
-  
+
   bool operator< (const ttf_id &other) const {
     if (fg != other.fg) return fg < other.fg;
     if (bg != other.bg) return bg < other.bg;
@@ -906,7 +906,7 @@ class enablerst : public enabler_inputst
 #ifdef CURSES
   void eventLoop_ncurses();
 #endif
-  
+
   // Framerate calculations
   int calculated_fps, calculated_gfps;
   queue<int> frame_timings, gframe_timings; // Milisecond lengths of the last few frames
@@ -945,7 +945,7 @@ class enablerst : public enabler_inputst
     async_msg() {}
     async_msg(msg_t m) { msg = m; }
   };
-      
+
   unsigned int async_frames;      // Number of frames the async thread has been asked to run
   bool async_paused;
   Chan<async_cmd> async_tobox;    // Messages to the simulation thread
@@ -963,20 +963,20 @@ class enablerst : public enabler_inputst
     cmd.cmd = async_cmd::start;
     async_tobox.write(cmd);
   }
-  
+
  public:
 
   string command_line;
 
   float ccolor[16][3]; // The curses-RGB mapping used for non-curses display modes
-  
+
   enablerst();
   unsigned long flag; // ENABLERFLAG_RENDER, ENABLERFLAG_MAXFPS
 
   int loop(string cmdline);
   void async_loop();
   void do_frame();
-  
+
   // Framerate interface
   void set_fps(int fps);
   void set_gfps(int gfps);
@@ -999,13 +999,13 @@ class enablerst : public enabler_inputst
     if (!renderer) return false;
     return renderer->uses_opengl();
   }
-  
+
   // Grid-size interface
   void override_grid_size(int w, int h); // Pick a /particular/ grid-size
   void release_grid_size(); // Undoes override_grid_size
   void zoom_display(zoom_commands command);
-  
-  
+
+
   // Window management
   bool is_fullscreen() { return fullscreen; }
   void toggle_fullscreen() {
@@ -1028,5 +1028,6 @@ char mainloop();
 void endroutine();
 
 extern enablerst enabler;
+extern int loopvar;
 
 #endif //ENABLER_H

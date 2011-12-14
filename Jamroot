@@ -1,11 +1,16 @@
-# Distributed under the Boost Software License, Version 1.0.
-# See accompanying file LICENSE or copy at http://www.boost.org/LICENSE
+# Copyright (c) 2008, Svein Ove Aas, parts by Tarn Adams, portions Bernard
+# Helyer, packaging and cleanup bits by Beren Minor. All rights reserved
+#
+# See accompanying file README.rst
 
 import multiarch ;
 import path ;
 import testing ;
 
 lib dl : : [ multiarch.search-path ] <search>lib/ ;
+lib boost_system : : [ multiarch.search-path ] <search>lib/ ;
+lib boost_chrono : : [ multiarch.search-path ] <search>lib/ ;
+lib boost_thread : : [ multiarch.search-path ] <search>lib/ ;
 lib GL : : [ multiarch.search-path ] <search>lib/ ;
 lib GLU : : [ multiarch.search-path ] <search>lib/ ;
 lib GLEW : : [ multiarch.search-path ] <search>lib/ ;
@@ -13,9 +18,15 @@ lib SDL : : [ multiarch.search-path ] <search>lib/ ;
 lib SDL_ttf : : [ multiarch.search-path ] <search>lib/ ;
 lib SDL_image : : [ multiarch.search-path ] <search>lib/ ;
 lib z : : [ multiarch.search-path ] ;
+lib zmq : : [ multiarch.search-path ] <search>lib/ ;
+lib boost_test_exec_monitor : : [ multiarch.search-path ] <search>lib/ <link>static ;
+lib boost_unit_test_framework : : [ multiarch.search-path ] <search>lib/ ;
 
 project dwarf-fortress : requirements
   <library>dl
+  <library>boost_system
+  <library>boost_chrono
+  <library>boost_thread
   <library>GL
   <library>GLU
   <library>GLEW
@@ -23,15 +34,16 @@ project dwarf-fortress : requirements
   <library>SDL_ttf
   <library>SDL_image
   <library>z
+  <library>zmq
   $(INCLUDES)
   <tag>@$(__name__).tag
-
+  
   <cflags>-fpch-preprocess
   <cflags>-std=c++0x
   <cflags>-Dunix
   <cflags>-Dlinux
-  <cflags>"`pkg-config gtk+-2.0 --cflags`"
-  <linkflags>"`pkg-config gtk+-2.0 --libs`"
+  <linkflags>-Wl,--as-needed
+  <include>src/common
   <include>$(BUILD_ROOT)
   : default-build debug ;
 
@@ -54,18 +66,94 @@ lib dwarf-fortress-graphics
     g_src/win32_compat.cpp
     g_src/textures.cpp
     g_src/resize++.cpp
+    g_src/renderer_curses.cpp
+    g_src/renderer_2d.cpp
     g_src/renderer_offscreen.cpp
+    g_src/renderer_opengl.cpp
     g_src/ttf_manager.cpp
   : <link>shared ;
 
-exe dwarf-fortress-tetris
+lib dwarf-fortress-graphics-common
+  : [ path.glob-tree src/common/ : *.cpp : ]
+  : <link>shared ;
+
+lib dwarf-fortress-graphics-classic
+  : [ path.glob-tree src/classic/ : *.cpp : ]
+    dwarf-fortress-graphics
+    dwarf-fortress-graphics-common
+  : <link>shared
+    <linkflags>"`pkg-config gtk+-2.0 --libs`"
+    <cflags>"`pkg-config gtk+-2.0 --cflags`" ;
+
+lib dwarf-fortress-graphics-client
+  : [ path.glob-tree src/client/ : *.cpp : ]
+    dwarf-fortress-graphics
+    dwarf-fortress-graphics-common
+  : <link>shared
+    <linkflags>"`pkg-config gtk+-2.0 --libs`"
+    <cflags>"`pkg-config gtk+-2.0 --cflags`" ;
+
+lib dwarf-fortress-graphics-server
+  : [ path.glob-tree src/server/ : *.cpp : ]
+    dwarf-fortress-graphics
+    dwarf-fortress-graphics-common
+  : <link>shared ;
+
+exe dwarf-fortress-tetris-classic
   : g_src/tetris.cpp
-    dwarf-fortress-graphics ;
+    dwarf-fortress-graphics
+    dwarf-fortress-graphics-classic
+  : ;
+
+exe dwarf-fortress-tetris-client
+  : g_src/tetris.cpp
+    dwarf-fortress-graphics
+    dwarf-fortress-graphics-client
+  : ;
+
+exe dwarf-fortress-tetris-server
+  : g_src/tetris.cpp
+    dwarf-fortress-graphics
+    dwarf-fortress-graphics-server
+  : ;
+
+alias dwarf-fortress-classic   : src/dwarf-fortress-classic ;
+alias dwarf-fortress-client    : src/dwarf-fortress-client ;
+alias dwarf-fortress-server    : src/dwarf-fortress-server ;
+alias dwarf-fortress-configure : src/dwarf-fortress-configure ;
+alias dwarf-fortress-mod       : src/dwarf-fortress-mod ;
+
+unit-test test_packer
+  : src/test/packer.cpp
+    dwarf-fortress-graphics-common
+  : <library>boost_test_exec_monitor
+    <library>boost_unit_test_framework ;
+
+alias test : test_packer ;
 
 multiarch.build build
-  : dwarf-fortress-tetris
-  : dwarf-fortress-graphics ;
-
+  : dwarf-fortress-tetris-classic
+    dwarf-fortress-tetris-client
+    dwarf-fortress-tetris-server
+  : dwarf-fortress-graphics
+    dwarf-fortress-graphics-common
+    dwarf-fortress-graphics-classic
+    dwarf-fortress-graphics-client
+    dwarf-fortress-graphics-server
+  : ;
 multiarch.install install
-  : dwarf-fortress-tetris
-  : dwarf-fortress-graphics ;
+  : dwarf-fortress-classic
+    dwarf-fortress-client
+    dwarf-fortress-server
+    dwarf-fortress-configure
+    dwarf-fortress-mod
+    dwarf-fortress-tetris-classic
+    dwarf-fortress-tetris-client
+    dwarf-fortress-tetris-server
+  : dwarf-fortress-graphics
+    dwarf-fortress-graphics-common
+    dwarf-fortress-graphics-classic
+    dwarf-fortress-graphics-client
+    dwarf-fortress-graphics-server
+  :
+  : <install-source-root>./include/ ;

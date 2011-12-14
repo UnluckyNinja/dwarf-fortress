@@ -1,5 +1,6 @@
-#include "renderer_2d.hpp"
-
+#include "renderer_offscreen.hpp"
+#include "init.h"
+#include "ttf_manager.hpp"
 
 bool renderer_offscreen::init_video(int w, int h) {
   if (screen) SDL_FreeSurface(screen);

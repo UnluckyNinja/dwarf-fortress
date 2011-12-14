@@ -1,9 +1,3 @@
-#ifdef __APPLE__
-# include "osx_messagebox.h"
-#elif defined(unix)
-# include <gtk/gtk.h>
-#endif
-
 #include "GL/glew.h"
 
 #ifdef WIN32

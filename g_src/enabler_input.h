@@ -39,7 +39,7 @@ struct EventMatch {
     SDLKey key;
     Uint8 button;
   };
-  
+
   bool operator== (const EventMatch &other) const {
     if (mod != other.mod) return false;
     if (type != other.type) return false;
@@ -50,7 +50,7 @@ struct EventMatch {
     default: return false;
     }
   }
-  
+
   bool operator< (const EventMatch &other) const {
     if (mod != other.mod) return mod < other.mod;
     if (type != other.type) return type < other.type;
@@ -82,7 +82,7 @@ class enabler_inputst {
   void key_repeat(InterfaceKey, Repeat);
   void load_macro_from_file(const std::string &file);
   void save_macro_to_file(const std::string &file, const std::string &name, const macro &);
-  
+
   // In practice.. do not use this one.
   void add_input(SDL_Event &e, Time now);
   // Use this one. It's much nicer.
@@ -121,7 +121,7 @@ class enabler_inputst {
 
   // Updating the key-bindings
   void register_key(); // Sets the next key-press to be stored instead of executed.
-  list<RegisteredKey> getRegisteredKey(); // Returns a description of stored keys. Max one of each type.
+  std::list<RegisteredKey> getRegisteredKey(); // Returns a description of stored keys. Max one of each type.
   void bindRegisteredKey(MatchType type, InterfaceKey key); // Binds one of the stored keys to key
   bool is_registering(); // Returns true if we're still waiting for a key-hit
 

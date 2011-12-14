@@ -1,0 +1,8 @@
+#!/bin/bash
+
+. dwarf-fortress-configure
+
+cd ${DWARF_FORTRESS_CACHE_HOME}
+
+export PATH=@INSTALL_PREFIX@/lib/dwarf-fortress/classic:$PATH
+dwarf-fortress $@
