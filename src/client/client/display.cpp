@@ -20,8 +20,6 @@
 
 #include <SDL/SDL_video.h>
 
-#include "client_program_format.hpp"
-
 namespace df {
 
   display_client::display_client(df::client_configuration_t const& config) :
@@ -33,15 +31,17 @@ namespace df {
     static char const vertex_shader_source[] = ""
         "#version 330 core\n"
         "\n"
+        "uniform vec2 dimensions;\n"
+        "\n"
         "in vec2 position;\n"
-        "in vec2 coordinates;\n"
         "out vert {\n"
         "  vec2 coordinates;\n"
         "} vertex;\n"
         "\n"
         "void main() {\n"
         "  gl_Position = vec4(position, 0.0, 1.0);\n"
-        "  vertex.coordinates = coordinates;\n"
+        "  vertex.coordinates.x = dimensions.x * position.x;\n"
+        "  vertex.coordinates.y = dimensions.y * position.y;\n"
         "}";
     static char const* vertex_shader_source_ptr = vertex_shader_source;
     static std::int32_t const vertex_shader_source_len = sizeof(vertex_shader_source);
@@ -59,6 +59,10 @@ namespace df {
     static char const fragment_shader_source[] = ""
         "#version 330 core\n"
         "\n"
+        "uniform vec2 dimensions;\n"
+        "\n"
+        "uniform uint current_frame;\n"
+        "uniform usampler2D update_time;\n"
         "uniform usampler2D character;\n"
         "uniform usampler2D character_foreground;\n"
         "uniform usampler2D character_background;\n"
@@ -80,7 +84,7 @@ namespace df {
         "out vec4 output_image;\n"
         "\n"
         "void main() {\n"
-        "  output_image = texture(character, vertex.coordinates);\n"
+        "  output_image = texture(update_time, vertex.coordinates);\n"
         "}\n"
         "";
     static char const* fragment_shader_source_ptr = fragment_shader_source;
@@ -113,8 +117,7 @@ namespace df {
   }
 
   static void create_textures(std::uint32_t program) {
-    std::uint32_t textures[10];
-    glGenTextures(10, textures);
+    std::uint32_t update_time;
   }
 
   void display_client::display(zmq::context_t& zmq_context) {
@@ -142,7 +145,10 @@ namespace df {
     create_program(program);
 
     std::uint32_t position = glGetAttribLocation(program, "position");
-    std::uint32_t coordinates = glGetAttribLocation(program, "coordinates");
+    std::uint32_t dimensions = glGetUniformLocation(program, "dimensions");
+    std::uint32_t current_frame = glGetUniformLocation(program, "current_frame");
+    std::uint32_t update_time = glGetUniformLocation(program, "update_time");
+
     std::uint32_t character = glGetUniformLocation(program, "character");
     std::uint32_t character_foreground = glGetUniformLocation(program, "character_foreground");
     std::uint32_t character_background = glGetUniformLocation(program, "character_background");
@@ -155,19 +161,63 @@ namespace df {
     std::uint32_t tile_size = glGetUniformLocation(program, "tile_size");
     std::uint32_t tileset = glGetUniformLocation(program, "tileset");
 
+    std::int8_t const positions_data[] = { -1, 1, -1, -1, 1, 1, 1, -1 };
+    std::uint32_t position_buffer;
+    glGenBuffers(1, &position_buffer);
+    glBindBuffer(GL_COPY_WRITE_BUFFER, position_buffer);
+    glBufferData(GL_COPY_WRITE_BUFFER, sizeof(positions_data), positions_data, GL_STATIC_DRAW);
+
+    std::uint8_t const indexes_data[] = { 0, 1, 2, 3 };
+    std::uint32_t indexes_buffer;
+    glGenBuffers(1, &indexes_buffer);
+    glBindBuffer(GL_COPY_WRITE_BUFFER, indexes_buffer);
+    glBufferData(GL_COPY_WRITE_BUFFER, sizeof(indexes_data), indexes_data, GL_STATIC_DRAW);
+
+    std::uint32_t vertex_array;
+    glGenVertexArrays(1, &vertex_array);
+    glBindVertexArray(vertex_array);
+    glBindBuffer(GL_ARRAY_BUFFER, position_buffer);
+    glVertexAttribPointer(position, 2, GL_BYTE, true, 0, 0);
+    glEnableVertexAttribArray(position);
+
+    std::uint32_t update_time_texture;
+    glGenTextures(1, &update_time_texture);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, update_time_texture);
+    glUniform1i(update_time, 0);
+
+    glViewport(0, 0, 500, 500);
+    glDepthRangef(0, 10);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexes_buffer);
+
+    std::uint32_t frame = 0;
     while (!df::kill_received()) {
+      frame++;
 
       std::string server_uuid;
       while (df::receive(zmq_listener, server_uuid, message)) {
 
         switch (message.type) {
-          case df::message::display::screen_update:
+          case df::message::display::screen_update: {
             if (message.resets_bounds) {
-              std::cerr << "client::grid_resize(" << message.width << "," << message.height << ") not implemented.\n";
+//              std::cerr << "client::grid_resize(" << message.width << "," << message.height << ") not implemented.\n";
 //              renderer->grid_resize(message.width, message.height);
+              glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, message.width, message.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+              glUniform2i(dimensions, message.width, message.height);
             }
 
-            for (std::uint32_t x = 0; x < message.width; ++x) {
+            df::bytes data(message.height * message.width * sizeof(std::uint32_t), frame);
+            glTexSubImage2D(GL_TEXTURE_2D,
+                            0,
+                            message.x,
+                            message.y,
+                            message.width,
+                            message.height,
+                            GL_RGBA,
+                            GL_UNSIGNED_BYTE,
+                            data.data());
+
+//            for (std::uint32_t x = 0; x < message.width; ++x) {
 //              df::graphic_character_t* characters = reinterpret_cast< df::graphic_character_t* >(gps.screen)
 //                  + (message.x + x) * gps.dimy + message.y;
 //              memcpy(characters,
@@ -189,8 +239,9 @@ namespace df {
 //                gps.screentexpos_cf[t] = (c >> 8) & 0xFF;
 //                gps.screentexpos_cbr[t] = (c >> 0) & 0xFF;
 //              }
-            }
+//            }
             break;
+          }
 
           case df::message::display::tileset_info:
             break;
@@ -198,6 +249,7 @@ namespace df {
 
       }
 
+      glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, 0);
       SDL_GL_SwapBuffers();
     }
   }
@@ -223,10 +275,6 @@ namespace df {
     } while (!df::display::acquire());
 
     client_.display(zmq_context_);
-
-    glDeleteProgram (program);
-    glDeleteShader (vertex_shader);
-    glDeleteShader (fragment_shader);
   }
 
 } // namespace df
