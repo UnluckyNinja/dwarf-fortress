@@ -1,7 +1,9 @@
 #version 330 core
 
+uniform uint width;
+uniform uint height;
+
 in vec2 position;
-in vec2 coordinates;
 
 out vert {
   vec2 coordinates;
@@ -9,5 +11,6 @@ out vert {
 
 void main() {
   gl_Position = vec4(position, 0.0, 1.0);
-  vertex.coordinates = coordinates;
+  
+  vertex.coordinates = (position + 1.0) / 2.0;
 }

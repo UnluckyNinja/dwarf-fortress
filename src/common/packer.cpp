@@ -8,7 +8,7 @@
  */
 
 #include "packer.hpp"
-#include "variable_integer.hpp"
+#include "varint.hpp"
 
 #include <zlib.h>
 

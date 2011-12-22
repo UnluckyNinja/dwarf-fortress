@@ -15,106 +15,16 @@
 #include "message/internal.hpp"
 #include "context.hpp"
 
-#define GL3_PROTOTYPES
-#include <GL3/gl3.h>
-
 #include <SDL/SDL_video.h>
 
+#define GTULU_USE_LIBLOGGING
 #include "client_program_format.hpp"
+#include "gtulu/internal/storage/data.hpp"
 
 namespace df {
 
   display_client::display_client(df::client_configuration_t const& config) :
       config_(config) {
-  }
-
-  static void create_program(std::uint32_t& program) {
-    std::int32_t result;
-    static char const vertex_shader_source[] = ""
-        "#version 330 core\n"
-        "\n"
-        "in vec2 position;\n"
-        "in vec2 coordinates;\n"
-        "out vert {\n"
-        "  vec2 coordinates;\n"
-        "} vertex;\n"
-        "\n"
-        "void main() {\n"
-        "  gl_Position = vec4(position, 0.0, 1.0);\n"
-        "  vertex.coordinates = coordinates;\n"
-        "}";
-    static char const* vertex_shader_source_ptr = vertex_shader_source;
-    static std::int32_t const vertex_shader_source_len = sizeof(vertex_shader_source);
-    std::uint32_t vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_shader_source_ptr, &vertex_shader_source_len);
-    glCompileShader(vertex_shader);
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &result);
-    if (!result) {
-      char buffer[2048];
-      std::int32_t log_length;
-      glGetShaderInfoLog(vertex_shader, 2048, &log_length, buffer);
-      std::clog << "vertex shader:\n" << std::string(buffer, log_length) << "\n";
-    }
-
-    static char const fragment_shader_source[] = ""
-        "#version 330 core\n"
-        "\n"
-        "uniform usampler2D character;\n"
-        "uniform usampler2D character_foreground;\n"
-        "uniform usampler2D character_background;\n"
-        "uniform usampler2D character_bold;\n"
-        "\n"
-        "uniform usampler2D tile;\n"
-        "uniform usampler2D tile_color_character;\n"
-        "uniform usampler2D tile_color_colorize;\n"
-        "uniform usampler2D tile_foreground;\n"
-        "uniform usampler2D tile_background;\n"
-        "\n"
-        "uniform uvec2 tile_size;\n"
-        "uniform sampler3D tileset;\n"
-        "\n"
-        "in vert {\n"
-        "  vec2 coordinates;\n"
-        "} vertex;\n"
-        "\n"
-        "out vec4 output_image;\n"
-        "\n"
-        "void main() {\n"
-        "  output_image = texture(character, vertex.coordinates);\n"
-        "}\n"
-        "";
-    static char const* fragment_shader_source_ptr = fragment_shader_source;
-    static std::int32_t const fragment_shader_source_len = sizeof(fragment_shader_source);
-    std::uint32_t fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_shader_source_ptr, &fragment_shader_source_len);
-    glCompileShader(fragment_shader);
-    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &result);
-    if (!result) {
-      char buffer[2048];
-      std::int32_t log_length;
-      glGetShaderInfoLog(fragment_shader, 2048, &log_length, buffer);
-      std::clog << "fragment shader:\n" << std::string(buffer, log_length) << "\n";
-    }
-
-    program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-
-    glLinkProgram(program);
-    glGetProgramiv(program, GL_LINK_STATUS, &result);
-    if (!result) {
-      char buffer[2048];
-      std::int32_t log_length;
-      glGetProgramInfoLog(program, 2048, &log_length, buffer);
-      std::clog << "program:\n" << std::string(buffer, log_length) << "\n";
-    }
-
-    glUseProgram(program);
-  }
-
-  static void create_textures(std::uint32_t program) {
-    std::uint32_t textures[10];
-    glGenTextures(10, textures);
   }
 
   void display_client::display(zmq::context_t& zmq_context) {
@@ -138,34 +48,64 @@ namespace df {
       df::send(zmq_display, request, false);
     }
 
-    std::uint32_t program;
-    create_program(program);
+    using namespace gtulu::internal;
+    float const positions_data[] = { -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f };
+    std::uint8_t const indexes_data[] = { 0, 1, 2, 3 };
 
-    std::uint32_t position = glGetAttribLocation(program, "position");
-    std::uint32_t coordinates = glGetAttribLocation(program, "coordinates");
-    std::uint32_t character = glGetUniformLocation(program, "character");
-    std::uint32_t character_foreground = glGetUniformLocation(program, "character_foreground");
-    std::uint32_t character_background = glGetUniformLocation(program, "character_background");
-    std::uint32_t character_bold = glGetUniformLocation(program, "character_bold");
-    std::uint32_t tile = glGetUniformLocation(program, "tile");
-    std::uint32_t tile_color_character = glGetUniformLocation(program, "tile_color_character");
-    std::uint32_t tile_color_colorize = glGetUniformLocation(program, "tile_color_colorize");
-    std::uint32_t tile_foreground = glGetUniformLocation(program, "tile_foreground");
-    std::uint32_t tile_background = glGetUniformLocation(program, "tile_background");
-    std::uint32_t tile_size = glGetUniformLocation(program, "tile_size");
-    std::uint32_t tileset = glGetUniformLocation(program, "tileset");
+    obj::buffer< fdat::gl_float > positions(positions_data);
+    obj::buffer< fdat::gl_unsigned_byte > indexes(indexes_data);
 
+    obj::program< fprg::client_program_format > program;
+    auto framebuffer = program.get_default_framebuffer();
+    auto vertexarray = program.new_vertexarray();
+
+    // Bind the vertex attribute named "position" to the positions buffer and "texture_position" to the texture_positions buffer.
+    vertexarray->set_position(positions);
+
+    // Select default texture format for 2d texture.
+    typedef ftex::select_format< ftgt::gl_texture_2d, fcmn::component::red_green_blue_alpha, fnum::ufixed8_ >::type texture_format;
+    df::bytes zero(128 * 128 * sizeof(std::uint8_t) * 4, 0);
+    obj::texture< texture_format > last_update(sto::wrap(zero.data(), 128, 128));
+
+    obj::texture< texture_format > characters(sto::wrap(zero.data(), 128, 128));
+
+    // Bind the uniform sampler named "background" to texture.
+    program.set_last_update(last_update);
+    program.set_characters(characters);
+
+    framebuffer->set_viewport(400, 400, 10, 50, 50, 0);
+    program.set_width(80);
+    program.set_height(25);
+
+    std::uint8_t frame = 0;
     while (!df::kill_received()) {
+      frame++;
+      program.set_last_frame(static_cast< float >(frame) / 255);
 
       std::string server_uuid;
-      while (df::receive(zmq_listener, server_uuid, message)) {
+      if (df::receive(zmq_listener, server_uuid, message)) {
 
         switch (message.type) {
-          case df::message::display::screen_update:
+          case df::message::display::screen_update: {
             if (message.resets_bounds) {
               std::cerr << "client::grid_resize(" << message.width << "," << message.height << ") not implemented.\n";
 //              renderer->grid_resize(message.width, message.height);
+              program.set_width(message.width);
+              program.set_height(message.height);
             }
+
+            df::bytes bytes(message.width * message.height * 4 * sizeof(frame), frame);
+            auto range = sto::range_of(last_update, sto::data::offset_type(message.y, message.x));
+            sto::copy(range, sto::wrap(bytes.data(), message.height, message.width));
+
+            auto char_range = sto::range_of(characters, sto::data::offset_type(message.y, message.x));
+            sto::copy(char_range,
+                      sto::wrap(reinterpret_cast< uint8_t* >(message.characters.data()),
+                                message.height,
+                                message.width));
+
+//            auto char_range = sto::range_of(characters, sto::data::offset_type(message.x, message.y));
+//            sto::copy(char_range, sto::wrap(message.characters.data(), message.width, message.height));
 
             for (std::uint32_t x = 0; x < message.width; ++x) {
 //              df::graphic_character_t* characters = reinterpret_cast< df::graphic_character_t* >(gps.screen)
@@ -191,13 +131,17 @@ namespace df {
 //              }
             }
             break;
+          }
 
           case df::message::display::tileset_info:
             break;
         }
 
+      } else {
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
       }
 
+      vertexarray->draw< drw::mode::gl_triangle_strip >(program, *framebuffer, indexes, 4);
       SDL_GL_SwapBuffers();
     }
   }
@@ -223,10 +167,6 @@ namespace df {
     } while (!df::display::acquire());
 
     client_.display(zmq_context_);
-
-    glDeleteProgram (program);
-    glDeleteShader (vertex_shader);
-    glDeleteShader (fragment_shader);
   }
 
 } // namespace df
