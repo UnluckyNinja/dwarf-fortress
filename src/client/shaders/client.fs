@@ -1,19 +1,16 @@
 #version 330 core
 
+in layout(origin_upper_left,pixel_center_integer) vec4 gl_FragCoord;
+
 uniform uint width;
 uniform uint height;
 
-uniform float last_frame;
-uniform sampler2D last_update;
+uniform uint last_frame;
+uniform usampler2D last_update;
 
 uniform sampler2D characters;
-uniform sampler2D tiles;
-uniform sampler2D tiles_color;
-
-uniform bool use_tile;
-
-uniform uvec2 tile_size;
-uniform sampler3D tilesets;
+uniform sampler2D texture_colors;
+uniform sampler2D texture_indexes;
 
 in vert {
   vec2 coordinates;
@@ -24,23 +21,17 @@ out vec4 output_image;
 void main() {
   vec2 size = textureSize(characters, 0);
   vec2 pos = vertex.coordinates;
-  pos.x = pos.x * width;
-  pos.y = (1 - pos.y) * height;
+  uint maxsize = max(width, height);
+  pos.x = pos.x * maxsize;
+  pos.y = (1 - pos.y) * maxsize;
   ivec2 ipos = ivec2(pos.y, pos.x);
   
   vec4 c = texelFetch(characters, ipos, 0);
-  if (use_tile) {
-    vec4 t = texture(tiles, pos);
-    vec4 t_color = texture(tiles_color, pos);
-    vec4 o = texture(tilesets, vec3(pos, t.r));
-    o.r += t_color.r;
-    o.g += t_color.g;
-    o.b += t_color.b;
-    output_image = o;
-  } else {
-    output_image = c;
-  }
+  vec4 tc = texelFetch(texture_colors, ipos, 0);
+  vec4 ti = texelFetch(texture_indexes, ipos, 0);
+  output_image = c + tc + ti;
 
-  vec4 last = texelFetch(last_update, ipos, 0);
-  output_image.a = (last.r / last_frame) * (last.r / last_frame);
+  uvec4 last = texelFetch(last_update, ipos, 0);
+  output_image.g = 1.0 / float(1u + last_frame - last.r);
+  output_image.b = vertex.coordinates.x;
 }

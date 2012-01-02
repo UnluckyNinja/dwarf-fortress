@@ -25,6 +25,8 @@ namespace df {
       enum type: std::uint8_t {
         synchronization_request,
         synchronization_response,
+        window_resize_request,
+        window_resize_response,
       };
 
     } // namespace internal
@@ -32,8 +34,11 @@ namespace df {
     struct internal_t {
         internal::type type_;
 
+        std::uint32_t width;
+        std::uint32_t height;
+
         internal_t(internal::type const type) :
-            type_(type) {
+            type_(type), width(0), height(0) {
         }
     };
 

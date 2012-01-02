@@ -19,6 +19,7 @@
 
 #define GTULU_USE_LIBLOGGING
 #include "client_program_format.hpp"
+#include "gtulu/internal/context.hpp"
 #include "gtulu/internal/storage/data.hpp"
 
 namespace df {
@@ -28,6 +29,25 @@ namespace df {
   }
 
   void display_client::display(zmq::context_t& zmq_context) {
+    /* Wait for input thread to create the window */
+    zmq::socket_t zmq_input(zmq_context, ZMQ_REQ);
+    zmq_input.bind("inproc://input");
+    {
+      df::bytes request;
+      df::pack(request, df::message::internal_t(df::message::internal::synchronization_request));
+      df::send(zmq_input, request, true);
+
+      df::bytes response;
+      df::receive(zmq_input, response, true);
+
+      request.clear();
+      df::pack(request, df::message::internal_t(df::message::internal::window_resize_request));
+      df::send(zmq_input, request);
+    }
+
+    do {
+    } while (!df::display::acquire());
+
     zmq::socket_t zmq_listener(zmq_context, ZMQ_SUB);
     std::string const zmq_address = config_.connection_protocol + "://" + config_.server_name + ":"
         + config_.display_port;
@@ -49,6 +69,17 @@ namespace df {
     }
 
     using namespace gtulu::internal;
+
+    std::string const gl_vendor = ctx::gl_vendor::get();
+    std::string const gl_renderer = ctx::gl_renderer::get();
+    std::string const gl_version = ctx::gl_version::get();
+    std::string const gl_shading_language_version = ctx::gl_shading_language_version::get();
+
+    __gtulu_info() << ctx::parameter::gl_vendor() << ": " << gl_vendor;
+    __gtulu_info() << ctx::parameter::gl_renderer() << ": " << gl_renderer;
+    __gtulu_info() << ctx::parameter::gl_version() << ": " << gl_version;
+    __gtulu_info() << ctx::parameter::gl_shading_language_version() << ": " << gl_shading_language_version;
+
     float const positions_data[] = { -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f };
     std::uint8_t const indexes_data[] = { 0, 1, 2, 3 };
 
@@ -64,23 +95,26 @@ namespace df {
 
     // Select default texture format for 2d texture.
     typedef ftex::select_format< ftgt::gl_texture_2d, fcmn::component::red_green_blue_alpha, fnum::ufixed8_ >::type texture_format;
+    typedef ftex::select_format< ftgt::gl_texture_2d, fcmn::component::red, fnum::uint32_ >::type utexture_format;
     df::bytes zero(128 * 128 * sizeof(std::uint8_t) * 4, 0);
-    obj::texture< texture_format > last_update(sto::wrap(zero.data(), 128, 128));
+    obj::texture< utexture_format > last_update(sto::wrap(zero.data(), 128, 128));
+
+    glBindTexture(GL_TEXTURE_2D, *last_update);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     obj::texture< texture_format > characters(sto::wrap(zero.data(), 128, 128));
+    obj::texture< texture_format > texture_colors(sto::wrap(zero.data(), 128, 128));
+    obj::texture< texture_format > texture_indexes(sto::wrap(zero.data(), 128, 128));
 
-    // Bind the uniform sampler named "background" to texture.
-    program.set_last_update(last_update);
-    program.set_characters(characters);
-
-    framebuffer->set_viewport(400, 400, 10, 50, 50, 0);
+    framebuffer->set_viewport(500, 500, 10, 0, 0, 0);
     program.set_width(80);
     program.set_height(25);
 
-    std::uint8_t frame = 0;
+    std::uint32_t frame = 0;
     while (!df::kill_received()) {
       frame++;
-      program.set_last_frame(static_cast< float >(frame) / 255);
+      program.set_last_frame(frame);
 
       std::string server_uuid;
       if (df::receive(zmq_listener, server_uuid, message)) {
@@ -94,13 +128,29 @@ namespace df {
               program.set_height(message.height);
             }
 
-            df::bytes bytes(message.width * message.height * 4 * sizeof(frame), frame);
-            auto range = sto::range_of(last_update, sto::data::offset_type(message.y, message.x));
-            sto::copy(range, sto::wrap(bytes.data(), message.height, message.width));
+            program.set_last_update(last_update);
+            std::vector< std::uint32_t > bytes(message.width * message.height, frame);
+            auto range = sto::at(last_update, sto::data::offset_type(message.y, message.x));
+            sto::copy(range, sto::wrap(reinterpret_cast< uint8_t* >(bytes.data()), message.height, message.width));
 
-            auto char_range = sto::range_of(characters, sto::data::offset_type(message.y, message.x));
+            program.set_characters(characters);
+            auto char_range = sto::at(characters, sto::data::offset_type(message.y, message.x));
             sto::copy(char_range,
                       sto::wrap(reinterpret_cast< uint8_t* >(message.characters.data()),
+                                message.height,
+                                message.width));
+
+            program.set_texture_colors(texture_colors);
+            auto tex_range = sto::at(texture_colors, sto::data::offset_type(message.y, message.x));
+            sto::copy(tex_range,
+                      sto::wrap(reinterpret_cast< uint8_t* >(message.texture_colors.data()),
+                                message.height,
+                                message.width));
+
+            program.set_texture_indexes(texture_indexes);
+            auto texi_range = sto::at(texture_indexes, sto::data::offset_type(message.y, message.x));
+            sto::copy(texi_range,
+                      sto::wrap(reinterpret_cast< uint8_t* >(message.texture_indexes.data()),
                                 message.height,
                                 message.width));
 
@@ -138,6 +188,24 @@ namespace df {
         }
 
       } else {
+        df::bytes response;
+        while (df::receive(zmq_input, response)) {
+          df::message::internal_t internal_response(df::message::internal::type::window_resize_response);
+          df::unpack(response, internal_response);
+
+          switch (internal_response.type_) {
+            case df::message::internal::type::window_resize_response:
+              framebuffer->set_viewport(internal_response.width, internal_response.height, 10, 0, 0, 0);
+              break;
+            default:
+              break;
+          }
+
+          df::bytes request;
+          df::pack(request, df::message::internal_t(df::message::internal::window_resize_request));
+          df::send(zmq_input, request);
+        }
+
         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
       }
 
@@ -151,21 +219,6 @@ namespace df {
   }
 
   void display_client::control_thread::operator()() {
-    /* Wait for input thread to create the window */
-    zmq::socket_t zmq_input(zmq_context_, ZMQ_REQ);
-    zmq_input.bind("inproc://input");
-    {
-      df::bytes request;
-      df::pack(request, df::message::internal_t(df::message::internal::synchronization_request));
-      df::send(zmq_input, request, true);
-
-      df::bytes response;
-      df::receive(zmq_input, response, true);
-    }
-
-    do {
-    } while (!df::display::acquire());
-
     client_.display(zmq_context_);
   }
 

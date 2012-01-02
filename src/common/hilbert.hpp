@@ -123,7 +123,7 @@ namespace df {
         typedef quadrant_info< quadrant::lower_right, Orientation > lower_right_info_t;
         typedef quadrant_info< quadrant::upper_right, Orientation > upper_right_info_t;
 
-        static inline std::uint64_t map(std::uint32_t x, std::uint32_t y) {
+        static inline std::uint64_t map(std::uint32_t const x, std::uint32_t const y) {
           if (x & 1) {
             if (y & 1) {
               return lower_right_info_t::value;
@@ -139,7 +139,7 @@ namespace df {
           }
         }
 
-        static inline void unmap(std::uint64_t const& value, std::uint32_t& x, std::uint32_t& y) {
+        static inline void unmap(std::uint64_t const value, std::uint32_t& x, std::uint32_t& y) {
           std::uint8_t const match = value & 0b11;
 
           if (match == lower_right_info_t::value) {
@@ -173,7 +173,7 @@ namespace df {
         static std::uint64_t const hilbert_shift = 2 * HilbertDepth;
         static std::uint64_t const hilbert_match = 1 << HilbertDepth;
 
-        static inline std::uint64_t map(std::uint32_t x, std::uint32_t y) {
+        static inline std::uint64_t map(std::uint32_t const x, std::uint32_t const y) {
           if (x & hilbert_match) {
             if (y & hilbert_match) {
               return (lower_right_info_t::value << hilbert_shift) | lower_right_t::map(x, y);
@@ -189,7 +189,7 @@ namespace df {
           }
         }
 
-        static inline void unmap(std::uint64_t const& value, std::uint32_t& x, std::uint32_t& y) {
+        static inline void unmap(std::uint64_t const value, std::uint32_t& x, std::uint32_t& y) {
           std::uint8_t const match = (value >> hilbert_shift) & 0b11;
 
           if (match == lower_right_info_t::value) {
@@ -215,7 +215,7 @@ namespace df {
   } // namespace detail
 
   template< std::size_t HilbertDepth = 10 >
-  static inline std::uint64_t to_hilbert(std::uint32_t x, std::uint32_t y) {
+  static inline std::uint64_t to_hilbert(std::uint32_t const x, std::uint32_t const y) {
     return detail::hilbert_map< HilbertDepth >::map(x, y);
   }
   template< std::size_t HilbertDepth = 10 >
@@ -225,6 +225,56 @@ namespace df {
     detail::hilbert_map< HilbertDepth >::unmap(value, x, y);
 
     return std::make_pair(x, y);
+  }
+
+  template< std::size_t HilbertDepth = 10 >
+  static inline std::vector< std::uint64_t > to_hilbert_range(std::uint32_t const from_x,
+                                                              std::uint32_t const from_y,
+                                                              std::uint32_t const to_x,
+                                                              std::uint32_t const to_y) {
+    std::uint64_t hilbert_start = df::to_hilbert(from_x, from_y);
+    std::uint64_t hilbert_end = df::to_hilbert(to_x, to_y);
+
+    for (std::uint32_t x = from_x; x < to_x; ++x) {
+      {
+        std::uint64_t const hilbert = df::to_hilbert(x, from_y);
+        hilbert_start = std::min(hilbert_start, hilbert);
+        hilbert_end = std::max(hilbert_end, hilbert);
+      }
+
+      {
+        std::uint64_t const hilbert = df::to_hilbert(x, to_y);
+        hilbert_start = std::min(hilbert_start, hilbert);
+        hilbert_end = std::max(hilbert_end, hilbert);
+      }
+    }
+
+    for (std::uint32_t y = from_y; y < to_y; ++y) {
+      {
+        std::uint64_t const hilbert = df::to_hilbert(from_x, y);
+        hilbert_start = std::min(hilbert_start, hilbert);
+        hilbert_end = std::max(hilbert_end, hilbert);
+      }
+
+      {
+        std::uint64_t const hilbert = df::to_hilbert(to_x, y);
+        hilbert_start = std::min(hilbert_start, hilbert);
+        hilbert_end = std::max(hilbert_end, hilbert);
+      }
+    }
+
+    std::vector< std::uint64_t > hilbert_range;
+    for (std::uint64_t h = hilbert_start; h < hilbert_end; ++h) {
+      std::pair< std::uint32_t, std::uint32_t > const coord = df::from_hilbert(h);
+      std::uint32_t const x = coord.first;
+      std::uint32_t const y = coord.second;
+
+      if (x >= from_x && x < to_x && y >= from_y && y < to_y) {
+        hilbert_range.push_back(h);
+      }
+    }
+
+    return hilbert_range;
   }
 
 } // namespace df

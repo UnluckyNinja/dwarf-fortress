@@ -20,6 +20,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_video.h>
 #include <SDL/SDL_image.h>
+
 //#include "g_src/enabler.h"
 
 namespace df {
@@ -49,48 +50,58 @@ namespace df {
     SDL_EnableUNICODE(1);
 
     while (!df::kill_received()) {
-//
-//      Uint32 now = SDL_GetTicks();
-//      SDL_Event event;
-//      while (SDL_PollEvent(&event)) {
-//
-//        // Handle SDL events
-//        switch (event.type) {
-//          case SDL_KEYDOWN:
-//          case SDL_KEYUP:
-//          case SDL_QUIT:
+
+      Uint32 now = SDL_GetTicks();
+      SDL_Event event;
+      while (SDL_PollEvent(&event)) {
+
+        // Handle SDL events
+        switch (event.type) {
+          case SDL_KEYDOWN:
+          case SDL_KEYUP:
+          case SDL_QUIT:
 //            enabler.add_input(event, now);
-//            break;
-//
-//          case SDL_MOUSEBUTTONDOWN:
-//          case SDL_MOUSEBUTTONUP:
-//            break;
-//
-//          case SDL_MOUSEMOTION:
-//            break;
-//
-//          case SDL_ACTIVEEVENT:
+            break;
+
+          case SDL_MOUSEBUTTONDOWN:
+          case SDL_MOUSEBUTTONUP:
+            break;
+
+          case SDL_MOUSEMOTION:
+            break;
+
+          case SDL_ACTIVEEVENT:
 //            enabler.clear_input();
-//            break;
-//
-//          case SDL_VIDEOEXPOSE:
-//            break;
-//
-//          case SDL_VIDEORESIZE:
-////            renderer->resize(event.resize.w, event.resize.h);
-//            break;
-//
-//        }
-//      }
-//
-//      std::string peer_uuid = config_.client_uuid;
-//      std::set < InterfaceKey > inputs = enabler.get_input(now);
-//      if (inputs.size() > 0) {
-//        df::message::input_t message;
-//        message.count = inputs.size();
-//        message.keys.assign(inputs.begin(), inputs.end());
-//        df::send(zmq_publisher, peer_uuid, message);
-//      }
+            break;
+
+          case SDL_VIDEOEXPOSE:
+            break;
+
+          case SDL_VIDEORESIZE: {
+            df::bytes request;
+            if (df::receive(zmq_input, request, true)) {
+              df::bytes bytes;
+              df::message::internal_t response(df::message::internal::window_resize_response);
+              response.width = event.resize.w;
+              response.height = event.resize.h;
+              df::pack(bytes, response);
+              df::send(zmq_input, bytes, true);
+            }
+          }
+//            renderer->resize(event.resize.w, event.resize.h);
+            break;
+
+        }
+      }
+
+      std::string peer_uuid = config_.client_uuid;
+      std::set< std::uint64_t > inputs; // = enabler.get_input(now);
+      if (inputs.size() > 0) {
+        df::message::input_t message;
+        message.count = inputs.size();
+        message.keys.assign(inputs.begin(), inputs.end());
+        df::send(zmq_publisher, peer_uuid, message);
+      }
 
     }
   }
@@ -106,7 +117,7 @@ namespace df {
 //    keybinding_init();
 //    enabler.load_keybindings("data/init/interface.txt");
 
-    // Disable key repeat
+// Disable key repeat
     SDL_EnableKeyRepeat(0, 0);
 
     // Set window title/icon.

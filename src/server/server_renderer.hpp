@@ -60,30 +60,14 @@ namespace df {
             return;
           }
 
-          std::uint64_t hilbert_allowed_margin = 128;
-          std::uint64_t hilbert = df::to_hilbert(message.x, message.y);
-          std::uint64_t min_hilbert = hilbert;
-          std::uint64_t max_hilbert = hilbert;
+          std::uint64_t const hilbert_allowed_margin = 128;
+          std::uint64_t const mean_hilbert = df::to_hilbert(message.x + message.width / 2,
+                                                            message.y + message.height / 2);
+          std::uint64_t const hilbert = df::to_hilbert(x, y);
 
-          hilbert = df::to_hilbert(message.x + message.width, message.y);
-          min_hilbert = std::min(min_hilbert, hilbert);
-          max_hilbert = std::max(max_hilbert, hilbert);
-
-          hilbert = df::to_hilbert(message.x, message.y + message.height);
-          min_hilbert = std::min(min_hilbert, hilbert);
-          max_hilbert = std::max(max_hilbert, hilbert);
-
-          hilbert = df::to_hilbert(message.x + message.width, message.y + message.height);
-          min_hilbert = std::min(min_hilbert, hilbert);
-          max_hilbert = std::max(max_hilbert, hilbert);
-
-          min_hilbert -= hilbert_allowed_margin;
-          max_hilbert += hilbert_allowed_margin;
-          hilbert = df::to_hilbert(x, y);
-
-          if (min_hilbert <= hilbert && hilbert < max_hilbert) {
-            std::int32_t xdiff = x - message.x;
-            std::int32_t ydiff = y - message.y;
+          if (std::max(mean_hilbert, hilbert) - std::min(mean_hilbert, hilbert) <= hilbert_allowed_margin) {
+            std::int32_t const xdiff = x - message.x;
+            std::int32_t const ydiff = y - message.y;
 
             if (xdiff < 0) {
               message.x += xdiff;
@@ -112,11 +96,12 @@ namespace df {
       }
 
       virtual void update_all() {
-        for (int x = 0; x < gps.dimx; x++) {
-          for (int y = 0; y < gps.dimy; y++) {
-            update_tile(x, y);
-          }
-        }
+        message.x = 0;
+        message.y = 0;
+        message.width = gps.dimx;
+        message.height = gps.dimy;
+
+        send_update();
       }
       virtual void render() {
         // Flush the pending update if required.

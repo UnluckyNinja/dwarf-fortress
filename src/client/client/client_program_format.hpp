@@ -98,21 +98,12 @@ namespace gtulu {
 
             void set_width(BOOST_PP_ENUM_PARAMS(1, width_value_t const width_in)) {
               obj::program_base::bind();
-              width_binder_t::bind(8, BOOST_PP_ENUM_PARAMS(1, width_in));
+              width_binder_t::bind(6, BOOST_PP_ENUM_PARAMS(1, width_in));
             }
             
 
-            typedef unf::gl_bool::binder use_tile_binder_t;
-            typedef unf::gl_bool::value_type use_tile_value_t;
-
-            void set_use_tile(BOOST_PP_ENUM_PARAMS(1, use_tile_value_t const use_tile_in)) {
-              obj::program_base::bind();
-              use_tile_binder_t::bind(7, BOOST_PP_ENUM_PARAMS(1, use_tile_in));
-            }
-            
-
-            typedef unf::gl_float::binder last_frame_binder_t;
-            typedef unf::gl_float::value_type last_frame_value_t;
+            typedef unf::gl_unsigned_int::binder last_frame_binder_t;
+            typedef unf::gl_unsigned_int::value_type last_frame_value_t;
 
             void set_last_frame(BOOST_PP_ENUM_PARAMS(1, last_frame_value_t const last_frame_in)) {
               obj::program_base::bind();
@@ -131,38 +122,28 @@ namespace gtulu {
 
             // #template#<uniform_sampler/>
 
-            typedef smp::gl_sampler_3d::binder tilesets_binder_t;
-            typedef smp::gl_sampler_3d::value_type tilesets_value_t;
+            typedef smp::gl_sampler_2d::binder texture_indexes_binder_t;
+            typedef smp::gl_sampler_2d::value_type texture_indexes_value_t;
 
             template< typename TextureFormat >
-            void set_tilesets(obj::texture< TextureFormat > const& value_in) {
+            void set_texture_indexes(obj::texture< TextureFormat > const& value_in) {
               obj::program_base::bind();
-              tilesets_binder_t::bind(6, value_in);
+              texture_indexes_binder_t::bind(5, value_in);
             }
             
 
-            typedef smp::gl_sampler_2d::binder tiles_color_binder_t;
-            typedef smp::gl_sampler_2d::value_type tiles_color_value_t;
+            typedef smp::gl_sampler_2d::binder texture_colors_binder_t;
+            typedef smp::gl_sampler_2d::value_type texture_colors_value_t;
 
             template< typename TextureFormat >
-            void set_tiles_color(obj::texture< TextureFormat > const& value_in) {
+            void set_texture_colors(obj::texture< TextureFormat > const& value_in) {
               obj::program_base::bind();
-              tiles_color_binder_t::bind(5, value_in);
+              texture_colors_binder_t::bind(4, value_in);
             }
             
 
-            typedef smp::gl_sampler_2d::binder tiles_binder_t;
-            typedef smp::gl_sampler_2d::value_type tiles_value_t;
-
-            template< typename TextureFormat >
-            void set_tiles(obj::texture< TextureFormat > const& value_in) {
-              obj::program_base::bind();
-              tiles_binder_t::bind(4, value_in);
-            }
-            
-
-            typedef smp::gl_sampler_2d::binder last_update_binder_t;
-            typedef smp::gl_sampler_2d::value_type last_update_value_t;
+            typedef smp::gl_unsigned_int_sampler_2d::binder last_update_binder_t;
+            typedef smp::gl_unsigned_int_sampler_2d::value_type last_update_value_t;
 
             template< typename TextureFormat >
             void set_last_update(obj::texture< TextureFormat > const& value_in) {
