@@ -21,7 +21,7 @@
 #include <SDL/SDL_video.h>
 #include <SDL/SDL_image.h>
 
-//#include "g_src/enabler.h"
+#include "g_src/enabler.h"
 
 namespace df {
 
@@ -60,7 +60,7 @@ namespace df {
           case SDL_KEYDOWN:
           case SDL_KEYUP:
           case SDL_QUIT:
-//            enabler.add_input(event, now);
+            enabler.add_input(event, now);
             break;
 
           case SDL_MOUSEBUTTONDOWN:
@@ -71,7 +71,7 @@ namespace df {
             break;
 
           case SDL_ACTIVEEVENT:
-//            enabler.clear_input();
+            enabler.clear_input();
             break;
 
           case SDL_VIDEOEXPOSE:
@@ -95,7 +95,11 @@ namespace df {
       }
 
       std::string peer_uuid = config_.client_uuid;
-      std::set< std::uint64_t > inputs; // = enabler.get_input(now);
+      std::set< std::uint64_t > inputs;
+      for (InterfaceKey key : enabler.get_input(now)) {
+        inputs.insert(key);
+      }
+
       if (inputs.size() > 0) {
         df::message::input_t message;
         message.count = inputs.size();
@@ -114,10 +118,10 @@ namespace df {
     SDL_Init(SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE);
     SDL_InitSubSystem(SDL_INIT_VIDEO);
 
-//    keybinding_init();
-//    enabler.load_keybindings("data/init/interface.txt");
+    keybinding_init();
+    enabler.load_keybindings("data/init/interface.txt");
 
-// Disable key repeat
+    // Disable key repeat
     SDL_EnableKeyRepeat(0, 0);
 
     // Set window title/icon.
