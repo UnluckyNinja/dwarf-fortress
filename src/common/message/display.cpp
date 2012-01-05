@@ -12,6 +12,28 @@
 
 namespace df {
 
+  void packer< message::tileset_t >::pack(df::bytes& bytes, message::tileset_t const& value) {
+    std::for_each(value.pixels.rbegin(), value.pixels.rend(), [&bytes](std::uint32_t const e) {df::pack(bytes, e);});
+
+    df::pack(bytes, value.tile_size_y_);
+    df::pack(bytes, value.tile_size_x_);
+    df::pack(bytes, value.tile_count_y_);
+    df::pack(bytes, value.tile_count_x_);
+    df::pack(bytes, value.tileset_id_);
+  }
+
+  void packer< message::tileset_t >::unpack(df::bytes& bytes, message::tileset_t& value) {
+    df::unpack(bytes, value.tileset_id_);
+    df::unpack(bytes, value.tile_count_x_);
+    df::unpack(bytes, value.tile_count_y_);
+    df::unpack(bytes, value.tile_size_x_);
+    df::unpack(bytes, value.tile_size_y_);
+
+    value.pixels.resize(value.tile_count_x_ * value.tile_count_y_ * value.tile_size_x_ * value.tile_size_y_);
+
+    std::for_each(value.pixels.begin(), value.pixels.end(), [&bytes](std::uint32_t& e) {df::unpack(bytes, e);});
+  }
+
   void packer< message::display_t >::pack(df::bytes& bytes, message::display_t const& value) {
     switch (value.type) {
       case message::display::screen_update:
@@ -32,27 +54,14 @@ namespace df {
         df::pack(bytes, value.width);
         df::pack(bytes, value.y);
         df::pack(bytes, value.x);
-
-        //    std::clog << "sending graphic update (x: " << value.x << ", y: " << value.y << ", w: " << value.width << ", h: "
-        //        << value.height << ")\n";
-        //    for (std::size_t ly = 0; ly < value.height; ++ly) {
-        //      for (std::size_t lx = 0; lx < x; ++lx) {
-        //        std::clog << " ";
-        //      }
-        //
-        //      for (std::size_t lx = 0; lx < value.width; ++lx) {
-        //        char c = (char) value.characters[lx * value.height + ly];
-        //        if (std::isprint(c)) {
-        //          std::clog << c;
-        //        } else {
-        //          std::clog << ".";
-        //        }
-        //      }
-        //      std::clog << "\n";
-        //    }
         break;
 
       case message::display::tileset_info:
+        std::for_each(value.tilesets.rbegin(),
+                      value.tilesets.rend(),
+                      [&bytes](df::message::tileset_t const e) {df::pack(bytes, e);});
+
+        df::pack(bytes, value.tileset_count);
         break;
     }
 
@@ -84,27 +93,16 @@ namespace df {
                       [&bytes](df::texture_color_t& e) {df::unpack(bytes, e);});
 
         df::unpack(bytes, value.resets_bounds);
-
-        //    std::clog << "received graphic update (x: " << value.x << ", y: " << value.y << ", w: " << value.width << ", h: "
-        //        << value.height << ")\n";
-        //    for (std::size_t ly = 0; ly < value.height; ++ly) {
-        //      for (std::size_t lx = 0; lx < x; ++lx) {
-        //        std::clog << " ";
-        //      }
-        //
-        //      for (std::size_t lx = 0; lx < value.width; ++lx) {
-        //        char c = (char) value.characters[lx * value.height + ly];
-        //        if (std::isprint(c)) {
-        //          std::clog << c;
-        //        } else {
-        //          std::clog << ".";
-        //        }
-        //      }
-        //      std::clog << "\n";
-        //    }
         break;
 
       case message::display::tileset_info:
+        df::unpack(bytes, value.tileset_count);
+
+        value.tilesets.resize(value.tileset_count);
+
+        std::for_each(value.tilesets.begin(),
+                      value.tilesets.end(),
+                      [&bytes](df::message::tileset_t& e) {df::unpack(bytes, e);});
         break;
     }
   }

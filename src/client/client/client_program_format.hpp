@@ -93,34 +93,36 @@ namespace gtulu {
 
             // #template#<uniform/>
 
-            typedef unf::gl_unsigned_int::binder width_binder_t;
-            typedef unf::gl_unsigned_int::value_type width_value_t;
+            typedef unf::gl_int_vec2::binder grid_size_binder_t;
+            typedef unf::gl_int_vec2::value_type grid_size_value_t;
 
-            void set_width(BOOST_PP_ENUM_PARAMS(1, width_value_t const width_in)) {
+            void set_grid_size(BOOST_PP_ENUM_PARAMS(2, grid_size_value_t const grid_size_in)) {
               obj::program_base::bind();
-              width_binder_t::bind(6, BOOST_PP_ENUM_PARAMS(1, width_in));
-            }
-            
-
-            typedef unf::gl_unsigned_int::binder last_frame_binder_t;
-            typedef unf::gl_unsigned_int::value_type last_frame_value_t;
-
-            void set_last_frame(BOOST_PP_ENUM_PARAMS(1, last_frame_value_t const last_frame_in)) {
-              obj::program_base::bind();
-              last_frame_binder_t::bind(2, BOOST_PP_ENUM_PARAMS(1, last_frame_in));
-            }
-            
-
-            typedef unf::gl_unsigned_int::binder height_binder_t;
-            typedef unf::gl_unsigned_int::value_type height_value_t;
-
-            void set_height(BOOST_PP_ENUM_PARAMS(1, height_value_t const height_in)) {
-              obj::program_base::bind();
-              height_binder_t::bind(1, BOOST_PP_ENUM_PARAMS(1, height_in));
+              grid_size_binder_t::bind(1, BOOST_PP_ENUM_PARAMS(2, grid_size_in));
             }
             
 
             // #template#<uniform_sampler/>
+
+            typedef smp::gl_sampler_2d::binder tilesets_info_binder_t;
+            typedef smp::gl_sampler_2d::value_type tilesets_info_value_t;
+
+            template< typename TextureFormat >
+            void set_tilesets_info(obj::texture< TextureFormat > const& value_in) {
+              obj::program_base::bind();
+              tilesets_info_binder_t::bind(5, value_in);
+            }
+            
+
+            typedef smp::gl_sampler_2d_array::binder tilesets_binder_t;
+            typedef smp::gl_sampler_2d_array::value_type tilesets_value_t;
+
+            template< typename TextureFormat >
+            void set_tilesets(obj::texture< TextureFormat > const& value_in) {
+              obj::program_base::bind();
+              tilesets_binder_t::bind(4, value_in);
+            }
+            
 
             typedef smp::gl_sampler_2d::binder texture_indexes_binder_t;
             typedef smp::gl_sampler_2d::value_type texture_indexes_value_t;
@@ -128,7 +130,7 @@ namespace gtulu {
             template< typename TextureFormat >
             void set_texture_indexes(obj::texture< TextureFormat > const& value_in) {
               obj::program_base::bind();
-              texture_indexes_binder_t::bind(5, value_in);
+              texture_indexes_binder_t::bind(3, value_in);
             }
             
 
@@ -138,17 +140,7 @@ namespace gtulu {
             template< typename TextureFormat >
             void set_texture_colors(obj::texture< TextureFormat > const& value_in) {
               obj::program_base::bind();
-              texture_colors_binder_t::bind(4, value_in);
-            }
-            
-
-            typedef smp::gl_unsigned_int_sampler_2d::binder last_update_binder_t;
-            typedef smp::gl_unsigned_int_sampler_2d::value_type last_update_value_t;
-
-            template< typename TextureFormat >
-            void set_last_update(obj::texture< TextureFormat > const& value_in) {
-              obj::program_base::bind();
-              last_update_binder_t::bind(3, value_in);
+              texture_colors_binder_t::bind(2, value_in);
             }
             
 

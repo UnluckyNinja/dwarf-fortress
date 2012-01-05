@@ -21,7 +21,9 @@
 #include <SDL/SDL_video.h>
 #include <SDL/SDL_image.h>
 
+#ifndef __x86_64__
 #include "g_src/enabler.h"
+#endif
 
 namespace df {
 
@@ -60,7 +62,9 @@ namespace df {
           case SDL_KEYDOWN:
           case SDL_KEYUP:
           case SDL_QUIT:
+#ifndef __x86_64__
             enabler.add_input(event, now);
+#endif
             break;
 
           case SDL_MOUSEBUTTONDOWN:
@@ -71,7 +75,9 @@ namespace df {
             break;
 
           case SDL_ACTIVEEVENT:
+#ifndef __x86_64__
             enabler.clear_input();
+#endif
             break;
 
           case SDL_VIDEOEXPOSE:
@@ -96,9 +102,11 @@ namespace df {
 
       std::string peer_uuid = config_.client_uuid;
       std::set< std::uint64_t > inputs;
+#ifndef __x86_64__
       for (InterfaceKey key : enabler.get_input(now)) {
         inputs.insert(key);
       }
+#endif
 
       if (inputs.size() > 0) {
         df::message::input_t message;
@@ -118,8 +126,10 @@ namespace df {
     SDL_Init(SDL_INIT_TIMER | SDL_INIT_NOPARACHUTE);
     SDL_InitSubSystem(SDL_INIT_VIDEO);
 
+#ifndef __x86_64__
     keybinding_init();
     enabler.load_keybindings("data/init/interface.txt");
+#endif
 
     // Disable key repeat
     SDL_EnableKeyRepeat(0, 0);

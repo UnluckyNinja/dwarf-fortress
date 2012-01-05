@@ -1,8 +1,5 @@
 #version 330 core
 
-uniform uint width;
-uniform uint height;
-
 in vec2 position;
 
 out vert {

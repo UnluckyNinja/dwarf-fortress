@@ -21,6 +21,7 @@
 #include "client_program_format.hpp"
 #include "gtulu/internal/context.hpp"
 #include "gtulu/internal/storage/data.hpp"
+#include "gtulu/internal/storage/copy.hpp"
 
 namespace df {
 
@@ -96,25 +97,35 @@ namespace df {
     // Select default texture format for 2d texture.
     typedef ftex::select_format< ftgt::gl_texture_2d, fcmn::component::red_green_blue_alpha, fnum::ufixed8_ >::type texture_format;
     typedef ftex::select_format< ftgt::gl_texture_2d, fcmn::component::red, fnum::uint32_ >::type utexture_format;
-    df::bytes zero(128 * 128 * sizeof(std::uint8_t) * 4, 0);
-    obj::texture< utexture_format > last_update(sto::wrap(zero.data(), 128, 128));
 
-    glBindTexture(GL_TEXTURE_2D, *last_update);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    typedef ftex::select_format< ftgt::gl_texture_2d_array, fcmn::component::red_green_blue_alpha, fnum::ufixed8_ >::type tileset_format;
+    typedef ftex::select_format< ftgt::gl_texture_2d, fcmn::component::red_green_blue, fnum::ufixed8_ >::type tileset_info_format;
+    df::bytes zero(128 * 128 * sizeof(std::uint8_t) * 4, 0);
+//    obj::texture< utexture_format > last_update(sto::wrap(zero.data(), 128, 128));
+//
+//    glBindTexture(GL_TEXTURE_2D, *last_update);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     obj::texture< texture_format > characters(sto::wrap(zero.data(), 128, 128));
     obj::texture< texture_format > texture_colors(sto::wrap(zero.data(), 128, 128));
     obj::texture< texture_format > texture_indexes(sto::wrap(zero.data(), 128, 128));
 
+    obj::texture< tileset_format > tilesets;
+    obj::texture< tileset_info_format > tilesets_info;
+
+    glBindTexture(GL_TEXTURE_1D, *tilesets_info);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
     framebuffer->set_viewport(500, 500, 10, 0, 0, 0);
-    program.set_width(80);
-    program.set_height(25);
+    program.set_grid_size(80, 25);
+//    program.set_window_size(500, 500);
 
     std::uint32_t frame = 0;
     while (!df::kill_received()) {
       frame++;
-      program.set_last_frame(frame);
+//      program.set_last_frame(frame);
 
       std::string server_uuid;
       if (df::receive(zmq_listener, server_uuid, message)) {
@@ -124,33 +135,29 @@ namespace df {
             if (message.resets_bounds) {
               std::cerr << "client::grid_resize(" << message.width << "," << message.height << ") not implemented.\n";
 //              renderer->grid_resize(message.width, message.height);
-              program.set_width(message.width);
-              program.set_height(message.height);
+              program.set_grid_size(message.width, message.height);
             }
 
-            program.set_last_update(last_update);
-            std::vector< std::uint32_t > bytes(message.width * message.height, frame);
-            auto range = sto::at(last_update, sto::data::offset_type(message.y, message.x));
-            sto::copy(range, sto::wrap(reinterpret_cast< uint8_t* >(bytes.data()), message.height, message.width));
+//            program.set_last_update(last_update);
+//            std::vector< std::uint32_t > bytes(message.width * message.height, frame);
+//            sto::copy(sto::at(last_update, message.y, message.x),
+//                      sto::wrap(reinterpret_cast< uint8_t* >(bytes.data()), message.height, message.width));
 
             program.set_characters(characters);
-            auto char_range = sto::at(characters, sto::data::offset_type(message.y, message.x));
-            sto::copy(char_range,
+            sto::copy(sto::at(characters, message.y, message.x),
                       sto::wrap(reinterpret_cast< uint8_t* >(message.characters.data()),
                                 message.height,
                                 message.width));
 
-            program.set_texture_colors(texture_colors);
-            auto tex_range = sto::at(texture_colors, sto::data::offset_type(message.y, message.x));
-            sto::copy(tex_range,
-                      sto::wrap(reinterpret_cast< uint8_t* >(message.texture_colors.data()),
+            program.set_texture_indexes(texture_indexes);
+            sto::copy(sto::at(texture_indexes, message.y, message.x),
+                      sto::wrap(reinterpret_cast< uint8_t* >(message.texture_indexes.data()),
                                 message.height,
                                 message.width));
 
-            program.set_texture_indexes(texture_indexes);
-            auto texi_range = sto::at(texture_indexes, sto::data::offset_type(message.y, message.x));
-            sto::copy(texi_range,
-                      sto::wrap(reinterpret_cast< uint8_t* >(message.texture_indexes.data()),
+            program.set_texture_colors(texture_colors);
+            sto::copy(sto::at(texture_colors, message.y, message.x),
+                      sto::wrap(reinterpret_cast< uint8_t* >(message.texture_colors.data()),
                                 message.height,
                                 message.width));
 
@@ -184,6 +191,43 @@ namespace df {
           }
 
           case df::message::display::tileset_info:
+            std::uint32_t depth = 0;
+            std::uint32_t width = 0;
+            std::uint32_t height = 0;
+
+            std::vector< std::uint8_t > tilesets_info_data;
+            for (df::message::tileset_t const& tileset : message.tilesets) {
+              width = std::max(width, tileset.tile_count_x_ * tileset.tile_size_x_);
+              height = std::max(height, tileset.tile_count_y_ * tileset.tile_size_y_);
+              depth = std::max(depth, tileset.tileset_id_ + 1u);
+            }
+
+            width = 1 << (static_cast< std::uint8_t >(log2(width)) + 1);
+            height = 1 << (static_cast< std::uint8_t >(log2(height)) + 1);
+            depth = 1 << (static_cast< std::uint8_t >(log2(depth)) + 1);
+
+            tilesets.resize(width, height, depth);
+            tilesets_info.resize(depth, 2);
+            tilesets_info_data.resize(3 * depth);
+
+            program.set_tilesets(tilesets);
+            for (df::message::tileset_t const& tileset : message.tilesets) {
+              std::uint32_t const tileset_width = tileset.tile_count_x_ * tileset.tile_size_x_;
+              std::uint32_t const tileset_height = tileset.tile_count_y_ * tileset.tile_size_y_;
+              sto::copy(sto::at(tilesets, 0, 0, tileset.tileset_id_),
+                        sto::wrap(reinterpret_cast< uint8_t const* >(tileset.pixels.data()),
+                                  tileset_width,
+                                  tileset_height));
+
+              tilesets_info_data[tileset.tileset_id_ * 3] = tileset.tile_size_x_;
+              tilesets_info_data[tileset.tileset_id_ * 3 + 1] = tileset.tile_size_y_;
+              tilesets_info_data[tileset.tileset_id_ * 3 + 2] = 0;
+            }
+
+            program.set_tilesets_info(tilesets_info);
+            sto::copy(tilesets_info,
+                      sto::wrap(reinterpret_cast< uint8_t const* >(tilesets_info_data.data()), depth, 1));
+
             break;
         }
 
@@ -196,6 +240,7 @@ namespace df {
           switch (internal_response.type_) {
             case df::message::internal::type::window_resize_response:
               framebuffer->set_viewport(internal_response.width, internal_response.height, 10, 0, 0, 0);
+//              program.set_window_size(internal_response.width, internal_response.height);
               break;
             default:
               break;

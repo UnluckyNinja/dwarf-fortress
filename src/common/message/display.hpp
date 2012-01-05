@@ -34,6 +34,15 @@ namespace df {
 
     } // namespace display
 
+    struct tileset_t {
+        std::uint16_t tileset_id_;
+        std::uint8_t tile_count_x_;
+        std::uint8_t tile_count_y_;
+        std::uint32_t tile_size_x_;
+        std::uint32_t tile_size_y_;
+        std::vector< std::uint32_t > pixels;
+    };
+
     struct display_t {
         display::type type;
 
@@ -45,9 +54,18 @@ namespace df {
         std::vector< texture_index_t > texture_indexes;
         std::vector< texture_color_t > texture_colors;
         std::uint8_t resets_bounds;
+
+        std::uint32_t tileset_count;
+        std::vector< tileset_t > tilesets;
     };
 
   } // namespace message
+
+  template< >
+  struct packer< message::tileset_t > {
+      static void pack(df::bytes& bytes, message::tileset_t const& value);
+      static void unpack(df::bytes& bytes, message::tileset_t& value);
+  };
 
   template< >
   struct packer< message::display_t > {

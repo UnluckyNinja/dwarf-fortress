@@ -1,3 +1,5 @@
+#ifndef __x86_64__
+
 #include "g_src/platform.h"
 #include "g_src/enabler.h"
 
@@ -103,4 +105,6 @@ int MessageBox(HWND *dummy, const char *text, const char *caption, UINT type)
 
   return ret;
 }
+#endif
+
 #endif
