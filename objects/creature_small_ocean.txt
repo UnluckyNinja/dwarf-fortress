@@ -1323,7 +1323,7 @@ creature_small_ocean
 	[DESCRIPTION:An invertebrate found off the coast.  It has a sting which can be severe.]
 	[NAME:sea nettle jellyfish:sea nettle jellyfish:sea nettle jellyfish]
 	[CASTE_NAME:sea nettle jellyfish:sea nettle jellyfish:sea nettle jellyfish]
-	[CREATURE_TILE:234][COLOR:6:0:0]
+	[CREATURE_TILE:224][COLOR:6:0:0]
 	[PETVALUE:10]
 	[AQUATIC][BEACH_FREQUENCY:10]
 	[VERMIN_GROUNDER]
