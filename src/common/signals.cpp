@@ -31,4 +31,8 @@ namespace df {
     return _kill_received;
   }
 
+  void kill() {
+    _kill_received = true;
+  }
+
 } // namespace df

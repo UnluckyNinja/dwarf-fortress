@@ -104,8 +104,8 @@ namespace gtulu {
 
             // #template#<uniform_sampler/>
 
-            typedef smp::gl_sampler_2d::binder tilesets_info_binder_t;
-            typedef smp::gl_sampler_2d::value_type tilesets_info_value_t;
+            typedef smp::gl_unsigned_int_sampler_1d::binder tilesets_info_binder_t;
+            typedef smp::gl_unsigned_int_sampler_1d::value_type tilesets_info_value_t;
 
             template< typename TextureFormat >
             void set_tilesets_info(obj::texture< TextureFormat > const& value_in) {

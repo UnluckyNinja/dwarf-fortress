@@ -14,6 +14,7 @@ namespace df {
 
   void add_kill_handler();
   bool kill_received();
+  void kill();
 
 } // namespace df
 

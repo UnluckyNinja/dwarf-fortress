@@ -84,18 +84,33 @@ namespace df {
             break;
 
           case SDL_VIDEORESIZE: {
+            df::display::release();
+
+            // Receive window resize request, and ask for synchronization.
             df::bytes request;
             if (df::receive(zmq_input, request, true)) {
+              df::bytes bytes;
+              df::message::internal_t response(df::message::internal::synchronization_request);
+
+              df::pack(bytes, response);
+              df::send(zmq_input, bytes, false);
+            }
+
+            // Receive window resize request, and send window resize response.
+            if (df::receive(zmq_input, request, true)) {
+              SDL_SetVideoMode(event.resize.w, event.resize.h, 32, SDL_HWSURFACE | SDL_RESIZABLE);
+
               df::bytes bytes;
               df::message::internal_t response(df::message::internal::window_resize_response);
               response.width = event.resize.w;
               response.height = event.resize.h;
+
               df::pack(bytes, response);
               df::send(zmq_input, bytes, true);
             }
-          }
-//            renderer->resize(event.resize.w, event.resize.h);
+
             break;
+          }
 
         }
       }
@@ -142,10 +157,7 @@ namespace df {
       SDL_FreeSurface(icon);
     }
 
-    // Setup OpenGL attributes
-    SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, false);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, true);
-    SDL_SetVideoMode(500, 500, 32, SDL_HWSURFACE | SDL_OPENGL | SDL_RESIZABLE);
+    SDL_SetVideoMode(500, 500, 32, SDL_HWSURFACE | SDL_RESIZABLE);
     SDL_ShowCursor(SDL_DISABLE);
 
     df::display::release();

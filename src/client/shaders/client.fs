@@ -13,7 +13,7 @@ uniform sampler2D texture_indexes;
 uniform sampler2D texture_colors;
 
 uniform sampler2DArray tilesets;
-uniform sampler2D tilesets_info;
+uniform usampler1D tilesets_info;
 
 in vert {
   vec2 coordinates;
@@ -39,20 +39,16 @@ void main() {
   uint char_index = uint(c.r * 0xFF);
   vec3 char_pos = vec3(char_index % 16u, char_index / 16u, char_id) + grid_pos_off;
   
-  vec2 char_info = texelFetch(tilesets_info, ivec2(char_id, 0), 0).xy;
-  char_pos.x *= char_info.x;
-  char_pos.y *= char_info.y;
+  uvec2 char_info = texelFetch(tilesets_info, int(char_id), 0).xy;
+  char_pos.x *= float(char_info.x);
+  char_pos.y *= float(char_info.y);
   
-  char_pos.x /= size.x;
-  char_pos.y /= size.y;
-  char_pos.z /= size.z;
-  
-  vec4 char_tile = textureLod(tilesets, char_pos, 0);
+  vec4 char_tile = texelFetch(tilesets, ivec3(char_pos), 0);
   
   uint tileset_id = uint(ti.r * 0xFF00) + uint(ti.g * 0xFF);
   vec3 tileset_pos = vec3(uint(ti.b * 0xFF), uint(ti.a * 0xFF), tileset_id) + grid_pos_off;
   
-  vec2 tileset_info = texelFetch(tilesets_info, ivec2(tileset_id, 0), 0).xy;
+  uvec2 tileset_info = texelFetch(tilesets_info, int(tileset_id), 0).xy;
   tileset_pos.x *= tileset_info.x;
   tileset_pos.y *= tileset_info.y;
   
@@ -62,11 +58,10 @@ void main() {
   
   vec4 tile = textureLod(tilesets, tileset_pos, 0);
   
-  output_image.r = char_tile.r;
-  output_image.g = tile.r;
-  output_image.a = tc.r;
-  if(char_info.y == 8u)
-    output_image.g = 1.0;
-  if(char_info.y == 12u)
-    output_image.b = 1.0;
+  if(tile.r > 0.0 || tile.g > 0.0 || tile.b > 0.0 || tile.a > 0.0) {
+    output_image = tile;
+  } else {
+    output_image = char_tile;
+  }
+  output_image.a = tile.r + tc.r;
 }

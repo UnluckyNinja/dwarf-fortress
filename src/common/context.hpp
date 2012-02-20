@@ -16,6 +16,7 @@ namespace df {
 
     void release();
     bool acquire();
+    void swap_buffers();
 
   } // namespace display
 

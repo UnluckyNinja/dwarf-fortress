@@ -219,12 +219,20 @@ namespace df {
     return detail::hilbert_map< HilbertDepth >::map(x, y);
   }
   template< std::size_t HilbertDepth = 10 >
-  static inline std::pair< std::uint32_t, std::uint32_t > from_hilbert(std::uint64_t const& value) {
+  static inline void to_hilbert(std::uint64_t& hilbert, std::uint32_t const x, std::uint32_t const y) {
+    hilbert = detail::hilbert_map< HilbertDepth >::map(x, y);
+  }
+  template< std::size_t HilbertDepth = 10 >
+  static inline std::pair< std::uint32_t, std::uint32_t > from_hilbert(std::uint64_t const value) {
     std::uint32_t x = 0;
     std::uint32_t y = 0;
     detail::hilbert_map< HilbertDepth >::unmap(value, x, y);
 
     return std::make_pair(x, y);
+  }
+  template< std::size_t HilbertDepth = 10 >
+  static inline void from_hilbert(std::uint64_t const value, std::uint32_t& x, std::uint32_t& y) {
+    detail::hilbert_map< HilbertDepth >::unmap(value, x, y);
   }
 
   template< std::size_t HilbertDepth = 10 >

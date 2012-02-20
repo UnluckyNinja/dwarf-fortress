@@ -20,10 +20,12 @@ namespace df {
     static Display* display;
     static GLXDrawable drawable;
     static GLXDrawable readable;
+
     static GLXContext context;
     static boost::mutex mutex;
 
     static int _x_error(Display *display, XErrorEvent *error) {
+      std::cerr << "X11 error happening... troubles ahead!\n";
       return 0;
     }
 
@@ -33,11 +35,16 @@ namespace df {
       SDL_SysWMinfo wm_info;
       SDL_VERSION(&wm_info.version);
       SDL_GetWMInfo(&wm_info);
-      wm_info.info.x11.window;
 
       XSetErrorHandler(_x_error);
 
       display = wm_info.info.x11.gfxdisplay;
+      drawable = wm_info.info.x11.window;
+      readable = wm_info.info.x11.window;
+    }
+
+    bool acquire() {
+      boost::lock_guard< boost::mutex > lock(mutex);
 
       int framebuffer_config_count = 0;
       GLXFBConfig* framebuffer_configs = NULL;
@@ -49,25 +56,11 @@ namespace df {
       XFree(framebuffer_configs);
       XSync(display, false);
 
-      drawable = wm_info.info.x11.window;
-      readable = wm_info.info.x11.window;
-
-      glXMakeContextCurrent(display, 0, 0, NULL);
-
-//      boost::lock_guard< boost::mutex > lock(mutex);
-//
-//      display = glXGetCurrentDisplay();
-//      drawable = glXGetCurrentDrawable();
-//      readable = glXGetCurrentReadDrawable();
-//      context = glXGetCurrentContext();
-//
-//      glXMakeContextCurrent(display, 0, 0, NULL);
+      return glXMakeContextCurrent(display, drawable, readable, context);
     }
 
-    bool acquire() {
-      boost::lock_guard< boost::mutex > lock(mutex);
-
-      return glXMakeContextCurrent(display, drawable, readable, context);
+    void swap_buffers() {
+      glXSwapBuffers(display, drawable);
     }
 
   } // namespace display

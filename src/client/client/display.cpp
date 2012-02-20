@@ -45,9 +45,7 @@ namespace df {
       df::pack(request, df::message::internal_t(df::message::internal::window_resize_request));
       df::send(zmq_input, request);
     }
-
-    do {
-    } while (!df::display::acquire());
+    df::display::acquire();
 
     zmq::socket_t zmq_listener(zmq_context, ZMQ_SUB);
     std::string const zmq_address = config_.connection_protocol + "://" + config_.server_name + ":"
@@ -99,13 +97,8 @@ namespace df {
     typedef ftex::select_format< ftgt::gl_texture_2d, fcmn::component::red, fnum::uint32_ >::type utexture_format;
 
     typedef ftex::select_format< ftgt::gl_texture_2d_array, fcmn::component::red_green_blue_alpha, fnum::ufixed8_ >::type tileset_format;
-    typedef ftex::select_format< ftgt::gl_texture_2d, fcmn::component::red_green_blue, fnum::ufixed8_ >::type tileset_info_format;
+    typedef ftex::select_format< ftgt::gl_texture_1d, fcmn::component::red_green_blue, fnum::uint8_ >::type tileset_info_format;
     df::bytes zero(128 * 128 * sizeof(std::uint8_t) * 4, 0);
-//    obj::texture< utexture_format > last_update(sto::wrap(zero.data(), 128, 128));
-//
-//    glBindTexture(GL_TEXTURE_2D, *last_update);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     obj::texture< texture_format > characters(sto::wrap(zero.data(), 128, 128));
     obj::texture< texture_format > texture_colors(sto::wrap(zero.data(), 128, 128));
@@ -134,14 +127,8 @@ namespace df {
           case df::message::display::screen_update: {
             if (message.resets_bounds) {
               std::cerr << "client::grid_resize(" << message.width << "," << message.height << ") not implemented.\n";
-//              renderer->grid_resize(message.width, message.height);
               program.set_grid_size(message.width, message.height);
             }
-
-//            program.set_last_update(last_update);
-//            std::vector< std::uint32_t > bytes(message.width * message.height, frame);
-//            sto::copy(sto::at(last_update, message.y, message.x),
-//                      sto::wrap(reinterpret_cast< uint8_t* >(bytes.data()), message.height, message.width));
 
             program.set_characters(characters);
             sto::copy(sto::at(characters, message.y, message.x),
@@ -160,33 +147,6 @@ namespace df {
                       sto::wrap(reinterpret_cast< uint8_t* >(message.texture_colors.data()),
                                 message.height,
                                 message.width));
-
-//            auto char_range = sto::range_of(characters, sto::data::offset_type(message.x, message.y));
-//            sto::copy(char_range, sto::wrap(message.characters.data(), message.width, message.height));
-
-            for (std::uint32_t x = 0; x < message.width; ++x) {
-//              df::graphic_character_t* characters = reinterpret_cast< df::graphic_character_t* >(gps.screen)
-//                  + (message.x + x) * gps.dimy + message.y;
-//              memcpy(characters,
-//                     message.characters.data() + x * message.height,
-//                     message.height * sizeof(df::graphic_character_t));
-//
-//              df::texture_index_t* texture_indexes = reinterpret_cast< df::texture_index_t* >(gps.screentexpos)
-//                  + (message.x + x) * gps.dimy + message.y;
-//              memcpy(texture_indexes,
-//                     message.texture_indexes.data() + x * message.height,
-//                     message.height * sizeof(df::texture_index_t));
-//
-//              for (std::uint32_t y = 0; y < message.height; ++y) {
-//                std::uint32_t t = (message.x + x) * gps.dimy + (message.y + y);
-//                df::texture_color_t c = message.texture_colors[x * message.height + y];
-//
-//                gps.screentexpos_addcolor[t] = (c >> 24) & 0xFF;
-//                gps.screentexpos_grayscale[t] = (c >> 16) & 0xFF;
-//                gps.screentexpos_cf[t] = (c >> 8) & 0xFF;
-//                gps.screentexpos_cbr[t] = (c >> 0) & 0xFF;
-//              }
-            }
             break;
           }
 
@@ -207,7 +167,7 @@ namespace df {
             depth = 1 << (static_cast< std::uint8_t >(log2(depth)) + 1);
 
             tilesets.resize(width, height, depth);
-            tilesets_info.resize(depth, 2);
+            tilesets_info.resize(depth);
             tilesets_info_data.resize(3 * depth);
 
             program.set_tilesets(tilesets);
@@ -219,43 +179,40 @@ namespace df {
                                   tileset_width,
                                   tileset_height));
 
+              std::cerr << tileset.tile_size_x_ << "x" << tileset.tile_size_y_ << "\n";
+
               tilesets_info_data[tileset.tileset_id_ * 3] = tileset.tile_size_x_;
               tilesets_info_data[tileset.tileset_id_ * 3 + 1] = tileset.tile_size_y_;
               tilesets_info_data[tileset.tileset_id_ * 3 + 2] = 0;
             }
 
             program.set_tilesets_info(tilesets_info);
-            sto::copy(tilesets_info,
-                      sto::wrap(reinterpret_cast< uint8_t const* >(tilesets_info_data.data()), depth, 1));
+            sto::copy(tilesets_info, sto::wrap(reinterpret_cast< uint8_t const* >(tilesets_info_data.data()), depth));
 
             break;
         }
 
-      } else {
-        df::bytes response;
-        while (df::receive(zmq_input, response)) {
-          df::message::internal_t internal_response(df::message::internal::type::window_resize_response);
-          df::unpack(response, internal_response);
+        vertexarray->draw< drw::mode::gl_triangle_strip >(program, *framebuffer, indexes, 4);
+        df::display::swap_buffers();
 
-          switch (internal_response.type_) {
-            case df::message::internal::type::window_resize_response:
-              framebuffer->set_viewport(internal_response.width, internal_response.height, 10, 0, 0, 0);
-//              program.set_window_size(internal_response.width, internal_response.height);
-              break;
-            default:
-              break;
-          }
+      } else {
+
+        df::bytes response;
+        // Now wait for the window resize response
+        if (df::receive(zmq_input, response, true)) {
+          df::message::internal_t internal_response(df::message::internal::window_resize_response);
+          df::unpack(response, internal_response);
+          framebuffer->set_viewport(internal_response.width, internal_response.height, 10, 0, 0, 0);
 
           df::bytes request;
           df::pack(request, df::message::internal_t(df::message::internal::window_resize_request));
           df::send(zmq_input, request);
+
+        } else {
+          boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         }
 
-        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
       }
-
-      vertexarray->draw< drw::mode::gl_triangle_strip >(program, *framebuffer, indexes, 4);
-      SDL_GL_SwapBuffers();
     }
   }
 

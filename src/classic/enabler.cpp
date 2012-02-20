@@ -17,10 +17,13 @@
 #include "g_src/renderer_offscreen.hpp"
 #include "g_src/renderer_opengl.hpp"
 
+void report_error(const char *error_preface, const char *error_message);
+
 void enablerst::async_loop() {
   async_paused = false;
   async_frames = 0;
   int fps = 100; // Just a thread-local copy
+
   for (;;) {
     // cout << "FRAMES: " << frames << endl;
     // Check for commands
