@@ -1,0 +1,5 @@
+debian/scripts/dwarf-fortress           /usr/games
+debian/scripts/dwarf-fortress-configure /usr/games
+debian/scripts/dwarf-fortress-mod       /usr/games
+debian/dwarf-fortress.desktop           /usr/share/applications
+debian/dwarf-fortress.svg               /usr/share/icons
