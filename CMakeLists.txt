@@ -1,0 +1,66 @@
+cmake_minimum_required(VERSION 2.6.2)
+include(GNUInstallDirs)
+
+project(dwarf-fortress)
+file(READ "${CMAKE_SOURCE_DIR}/debian/version" DWARF_FORTRESS_VERSION)
+string(STRIP "${DWARF_FORTRESS_VERSION}" DWARF_FORTRESS_VERSION)
+string(REGEX REPLACE "\\..*$" "" DWARF_FORTRESS_SOVERSION "${DWARF_FORTRESS_VERSION}")
+
+set(CMAKE_CXX_FLAGS "-std=c++0x -Dlinux -Dunix")
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(DWARF_FORTRESS_DEPS REQUIRED gtk+-2.0 gl glu glew sdl SDL_image SDL_ttf zlib)
+
+include_directories(${DWARF_FORTRESS_DEPS_INCLUDE_DIRS})
+link_directories(${DWARF_FORTRESS_DEPS_LIBRARY_DIRS})
+
+add_library(dwarf-fortress-graphics SHARED
+  g_src/basics.cpp
+  g_src/command_line.cpp
+  g_src/files.cpp
+  g_src/find_files_posix.cpp
+  g_src/graphics.cpp
+  g_src/enabler.cpp
+  g_src/init.cpp
+  g_src/interface.cpp
+  g_src/keybindings.cpp
+  g_src/music_and_sound_openal.cpp
+  g_src/random.cpp
+  g_src/textlines.cpp
+  g_src/enabler_input.cpp
+  g_src/ViewBase.cpp
+  g_src/KeybindingScreen.cpp
+  g_src/win32_compat.cpp
+  g_src/textures.cpp
+  g_src/resize++.cpp
+  g_src/renderer_offscreen.cpp
+  g_src/ttf_manager.cpp
+)
+set_target_properties(dwarf-fortress-graphics PROPERTIES
+  SONAME dwarf-fortress-graphics
+  VERSION ${DWARF_FORTRESS_VERSION}
+  SOVERSION ${DWARF_FORTRESS_SOVERSION}
+)
+target_link_libraries(dwarf-fortress-graphics dl ${DWARF_FORTRESS_DEPS_LIBRARIES})
+
+add_executable(dwarf-fortress-tetris
+  g_src/tetris.cpp
+)
+target_link_libraries(dwarf-fortress-tetris dwarf-fortress-graphics)
+
+add_custom_target(dwarf-fortress-link
+  COMMAND ln -sf "../$ENV{DEB_HOST_MULTIARCH}/libdwarf-fortress-graphics.so.0" ${CMAKE_BINARY_DIR}/libgraphics.so
+)
+add_dependencies(dwarf-fortress-graphics dwarf-fortress-link)
+
+install(TARGETS dwarf-fortress-graphics dwarf-fortress-tetris
+  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/games
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/$ENV{DEB_HOST_MULTIARCH}"
+)
+install(PROGRAMS ${CMAKE_SOURCE_DIR}/libs/Dwarf_Fortress
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/dwarf-fortress
+  RENAME dwarf-fortress
+)
+install(FILES ${CMAKE_BINARY_DIR}/libgraphics.so
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/dwarf-fortress
+)
