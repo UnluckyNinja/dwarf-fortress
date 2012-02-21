@@ -1,0 +1,5 @@
+dwarf-fortress-mod-ironhand (0.34.2.0a-1) unstable; urgency=low
+
+  * Initial release (Closes: #588377)
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Tue, 21 Feb 2012 23:33:58 +0100
