@@ -1,0 +1,18 @@
+Source: dwarf-fortress-mod-default
+Section: non-free/games
+Priority: extra
+Maintainer: Beren Minor <beren.minor+debian@gmail.com>
+Build-Depends: debhelper (>= 7.2.3~), python-support
+Standards-Version: 3.9.2
+Homepage: http://www.bay12games.com/dwarves/
+Vcs-Git: git://github.com/berenm/dwarf-fortress.git
+Vcs-Browser: https://github.com/berenm/dwarf-fortress/
+
+Package: dwarf-fortress-mod-default
+Architecture: any
+Depends: ${misc:Depends}, dwarf-fortress-data (>=0.34.2.0)
+Description: Dwarf Fortress default graphic mod
+ Dwarf Fortress is a single-player fantasy game. You can control a dwarven
+ outpost or an adventurer in a randomly generated, persistent world.
+ .
+ Copyright: 2002-2012 Tarn Adams toadyone@bay12games.com
