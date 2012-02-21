@@ -1,0 +1,135 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-stylesheet type="text/xsl" href="http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+  "http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd" [
+<!-- Process this file with an XSLT processor, e.g. xsltproc:    -->
+<!-- `xsltproc \
+      -''-nonet \
+      -''-param man.charmap.use.subset "0" \
+      -''-param make.year.ranges "1" \
+      -''-param make.single.year.ranges "1" \
+      manpage.xml'                 -->
+
+  <!-- Fill in your name for FIRSTNAME and SURNAME.        -->
+  <!ENTITY dhfirstname "Beren">
+  <!ENTITY dhsurname   "Minor">
+  <!ENTITY dhemail     "beren.minor+debian@gmail.com">
+  <!-- dhusername could also be set to "&firstname; &surname;".  -->
+  <!ENTITY dhusername  "&dhfirstname; &dhsurname;">
+
+  <!-- TITLE should be something like "User commands",     -->
+  <!-- "&dhpackage; command-line reference" or similar (see e.g. -->
+  <!-- http://www.tldp.org/HOWTO/Man-Page/q2.html). But limit    -->
+  <!-- the length to 30 chars.           -->
+  <!ENTITY dhtitle     "Command line options">
+
+  <!-- This is the application/package name.         -->
+  <!ENTITY dhucpackage "DWARF-FORTRESS">
+  <!ENTITY dhpackage   "dwarf-fortress-configure">
+  <!ENTITY dhrelease   "0.34.2.0">
+
+  <!-- If the application e.g. belongs to a package like X.org,  -->
+  <!-- this should be set to the package/suite name instead of   -->
+  <!-- dhpackage.            -->
+  <!ENTITY dhproduct   "dwarf-fortress">
+
+  <!-- SECTION should be 1-8, maybe w/ subsection other    -->
+  <!-- parameters are allowed: see man(7), man(1) and      -->
+  <!-- http://www.tldp.org/HOWTO/Man-Page/q2.html.         -->
+  <!ENTITY dhsection   "6">
+]>
+
+<refentry>
+  <refentryinfo>
+    <title>&dhtitle;</title>
+    <!-- Better put a suite name instead of &dhpackage; into productname -->
+    <productname>&dhproduct;</productname>
+    <releaseinfo role="version">&dhrelease;</releaseinfo>
+    <authorgroup>
+      <author>
+        <firstname>Tarn</firstname>
+        <surname>Adams</surname>
+        <contrib>Wrote the dwarf-fortress game and original command line readme.</contrib>
+        <address>
+          <email>toadyone@bay12games.com</email>
+        </address>
+      </author>
+      <author>
+        <firstname>&dhfirstname;</firstname>
+        <surname>&dhsurname;</surname>
+        <contrib>Rewrote the readme in DocBook XML for the Debian distribution.</contrib>
+        <address>
+          <email>&dhemail;</email>
+        </address>
+      </author>
+    </authorgroup>
+    <copyright>
+      <year>2002</year>
+      <year>2003</year>
+      <year>2004</year>
+      <year>2005</year>
+      <year>2006</year>
+      <year>2007</year>
+      <year>2008</year>
+      <year>2009</year>
+      <year>2010</year>
+      <year>2011</year>
+      <holder>Tarn Adams</holder>
+    </copyright>
+    <legalnotice>
+      <para>All rights are retained by Tarn Adams, save the following: you may redistribute the binary and accompanying files, unmodified, provided you do so free of charge. If you'd like to distribute a modified version of the game or portion of the archive and are worried about copyright infringement, please contact Tarn Adams at toadyone@bay12games.com.</para>
+      <para>This software is still in development, and this means that there are going to be problems, including serious problems that, however unlikely, might damage your system or the information stored on it. Please be aware of this before playing.</para>
+    </legalnotice>
+  </refentryinfo>
+  <refmeta>
+    <refentrytitle>&dhucpackage;</refentrytitle>
+    <manvolnum>&dhsection;</manvolnum>
+  </refmeta>
+  <refnamediv>
+    <refname>&dhpackage;</refname>
+    <refpurpose>dwarf-fortress game configuration</refpurpose>
+  </refnamediv>
+  <refsynopsisdiv>
+    <cmdsynopsis>
+      <command>&dhpackage;</command>
+      <arg choice="plain"><option>-e</option></arg>
+    </cmdsynopsis>
+  </refsynopsisdiv>
+  <refsect1 id="description">
+    <title>DESCRIPTION</title>
+    <para><command>&dhpackage;</command> configures the <application>dwarf-fortress</application> game.</para>
+  </refsect1>
+  <refsect1 id="options">
+    <title>OPTIONS</title>
+    <variablelist>
+      <varlistentry>
+        <term><option>-e</option></term>
+        <listitem>
+          <para>This will open the user's configuration files in <application>gedit</application>.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+  <refsect1 id="files">
+    <title>FILES</title>
+    <variablelist>
+      <varlistentry>
+        <term><filename>~/.config/dwarf-fortress/</filename></term>
+        <listitem>
+          <para>The local folder containing user's configuration files.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+<!-- <refsect1 id="environment">
+    <title>ENVIONMENT</title>
+    <variablelist>
+      <varlistentry>
+      <term><envar>FOOCONF</envar></term>
+        <listitem>
+          <para>The full pathname for an alternate system wide configuration file <citerefentry><refentrytitle>foo.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry> (see also <xref linkend="files"/>). Overridden by the <option>-c</option> option.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>  -->
+</refentry>

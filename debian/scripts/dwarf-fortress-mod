@@ -1,0 +1,42 @@
+#!/bin/bash
+
+. dwarf-fortress-configure &> /dev/null
+
+if [ "$1" = "-l" ] || [ "$1" = "--list" ]
+then
+  echo "dwarf-fortress user mods:" >&2
+  find ${DWARF_FORTRESS_USER_MODS_HOME}/* -type d -prune -exec basename '{}' \; 2>/dev/null | sed -re 's/^/  /g'
+
+  echo "dwarf-fortress system mods:" >&2
+  find ${DWARF_FORTRESS_MODS_HOME}/* -type d -prune -exec basename '{}' \; 2>/dev/null | sed -re 's/^/  /g'
+fi
+
+if [ "$1" = "-s" ] || [ "$1" = "--select" ]
+then
+
+  if [ -d ${DWARF_FORTRESS_USER_MODS_HOME}/$2 ]
+  then
+    echo -n "dwarf-fortress: Installing $2 mod from user mods... " >&2
+    rm -f ${DWARF_FORTRESS_CURRENT_MOD}
+    ln -sf ${DWARF_FORTRESS_USER_MODS_HOME}/$2 ${DWARF_FORTRESS_CURRENT_MOD} 2>/dev/null
+    echo "done" >&2
+    echo "dwarf-fortress: Remember to enable graphics mode and to change graphic file to tiles.png or tiles-lite.png in dwarf-fortress config file." >&2
+
+  elif [ -d ${DWARF_FORTRESS_MODS_HOME}/$2 ]
+  then
+    echo -n "dwarf-fortress: Installing $2 mod from system mods... " >&2
+    rm -f ${DWARF_FORTRESS_CURRENT_MOD}
+    ln -sf ${DWARF_FORTRESS_MODS_HOME}/$2 ${DWARF_FORTRESS_CURRENT_MOD} 2>/dev/null
+    echo "done" >&2
+    echo "dwarf-fortress: Remember to enable graphics mode and to change graphic file to tiles.png or tiles-lite.png in dwarf-fortress config file." >&2
+
+  else
+    echo "dwarf-fortress: mod $2 not found." >&2
+  fi
+
+  cp -f ${DWARF_FORTRESS_CURRENT_MOD}/tiles.png      ${DWARF_FORTRESS_CACHE_HOME}/data/art/  2>/dev/null
+  cp -f ${DWARF_FORTRESS_CURRENT_MOD}/tiles-lite.png ${DWARF_FORTRESS_CACHE_HOME}/data/art/  2>/dev/null
+  cp -f ${DWARF_FORTRESS_CURRENT_MOD}/colors.txt     ${DWARF_FORTRESS_CACHE_HOME}/data/init/ 2>/dev/null
+
+fi
+

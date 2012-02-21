@@ -1,0 +1,49 @@
+#!/bin/bash
+
+echo -n "dwarf-fortress: Refreshing local data... " >&2
+
+DWARF_FORTRESS_DATA_HOME=${DWARF_FORTRESS_DATA_HOME:-${XDG_DATA_HOME:-~/.local/share}/dwarf-fortress}
+DWARF_FORTRESS_CONFIG_HOME=${DWARF_FORTRESS_CONFIG_HOME:-${XDG_CONFIG_HOME:-~/.config}/dwarf-fortress}
+DWARF_FORTRESS_CACHE_HOME=${DWARF_FORTRESS_CACHE_HOME:-${XDG_CACHE_HOME:-~/.cache}/dwarf-fortress}
+DWARF_FORTRESS_SHARE=/usr/share/games/dwarf-fortress
+DWARF_FORTRESS_MODS_HOME=${DWARF_FORTRESS_SHARE}/mods
+DWARF_FORTRESS_USER_MODS_HOME=${DWARF_FORTRESS_DATA_HOME}/mods
+DWARF_FORTRESS_CURRENT_MOD=${DWARF_FORTRESS_DATA_HOME}/current-mod
+
+# Be sure that local folders exist
+install -d ${DWARF_FORTRESS_DATA_HOME}
+install -d ${DWARF_FORTRESS_DATA_HOME}/save
+install -d ${DWARF_FORTRESS_DATA_HOME}/movies
+install -d ${DWARF_FORTRESS_CONFIG_HOME}
+install -d ${DWARF_FORTRESS_USER_MODS_HOME}
+
+# Set current mod to default one if none is currently linked
+[ -h ${DWARF_FORTRESS_CURRENT_MOD} ] || ( ln -sf ${DWARF_FORTRESS_MODS_HOME}/default ${DWARF_FORTRESS_CURRENT_MOD} && dwarf-fortress-mod -s default )
+
+# Refresh DF data
+rm -rf ${DWARF_FORTRESS_CACHE_HOME}
+install -d ${DWARF_FORTRESS_CACHE_HOME}
+cp -rf ${DWARF_FORTRESS_SHARE}/data  ${DWARF_FORTRESS_CACHE_HOME}
+ln -sf ${DWARF_FORTRESS_CURRENT_MOD} ${DWARF_FORTRESS_CACHE_HOME}/raw
+
+# Link save and movies folders
+ln -s ${DWARF_FORTRESS_DATA_HOME}/save   ${DWARF_FORTRESS_CACHE_HOME}/data/
+ln -s ${DWARF_FORTRESS_DATA_HOME}/movies ${DWARF_FORTRESS_CACHE_HOME}/data/
+
+# Initialize config folder and art folder if needed
+[ -f ${DWARF_FORTRESS_CONFIG_HOME}/init.txt ] || cp -rf ${DWARF_FORTRESS_SHARE}/data/init/*          ${DWARF_FORTRESS_CONFIG_HOME}
+[ -d ${DWARF_FORTRESS_DATA_HOME}/art ]        || cp -rf ${DWARF_FORTRESS_SHARE}/data/art             ${DWARF_FORTRESS_DATA_HOME}
+
+# Remove original init, art folder an link ours instead
+rm -rf ${DWARF_FORTRESS_CACHE_HOME}/data/init
+rm -rf ${DWARF_FORTRESS_CACHE_HOME}/data/art
+ln -s ${DWARF_FORTRESS_CONFIG_HOME}        ${DWARF_FORTRESS_CACHE_HOME}/data/init
+ln -s ${DWARF_FORTRESS_DATA_HOME}/art      ${DWARF_FORTRESS_CACHE_HOME}/data/
+
+if [ "$1" = "-e" ]
+then
+  gedit ${DWARF_FORTRESS_CONFIG_HOME}/{colors,d_init,init}.txt
+fi
+
+echo "done" >&2
+
