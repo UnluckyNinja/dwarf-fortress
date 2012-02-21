@@ -1,0 +1,71 @@
+# Distributed under the Boost Software License, Version 1.0.
+# See accompanying file LICENSE or copy at http://www.boost.org/LICENSE
+
+import multiarch ;
+import path ;
+import testing ;
+
+lib dl : : [ multiarch.search-path ] <search>lib/ ;
+lib GL : : [ multiarch.search-path ] <search>lib/ ;
+lib GLU : : [ multiarch.search-path ] <search>lib/ ;
+lib GLEW : : [ multiarch.search-path ] <search>lib/ ;
+lib SDL : : [ multiarch.search-path ] <search>lib/ ;
+lib SDL_ttf : : [ multiarch.search-path ] <search>lib/ ;
+lib SDL_image : : [ multiarch.search-path ] <search>lib/ ;
+lib z : : [ multiarch.search-path ] ;
+
+project dwarf-fortress : requirements
+  <library>dl
+  <library>GL
+  <library>GLU
+  <library>GLEW
+  <library>SDL
+  <library>SDL_ttf
+  <library>SDL_image
+  <library>z
+  $(INCLUDES)
+  <tag>@$(__name__).tag
+
+  <cflags>-fpch-preprocess
+  <cflags>-std=c++0x
+  <cflags>-Dunix
+  <cflags>-Dlinux
+  <cflags>"`pkg-config gtk+-2.0 --cflags`"
+  <linkflags>"`pkg-config gtk+-2.0 --libs`"
+  <include>$(BUILD_ROOT)
+  : default-build debug ;
+
+lib dwarf-fortress-graphics
+  : g_src/basics.cpp
+    g_src/command_line.cpp
+    g_src/files.cpp
+    g_src/find_files_posix.cpp
+    g_src/graphics.cpp
+    g_src/enabler.cpp
+    g_src/init.cpp
+    g_src/interface.cpp
+    g_src/keybindings.cpp
+    g_src/music_and_sound_openal.cpp
+    g_src/random.cpp
+    g_src/textlines.cpp
+    g_src/enabler_input.cpp
+    g_src/ViewBase.cpp
+    g_src/KeybindingScreen.cpp
+    g_src/win32_compat.cpp
+    g_src/textures.cpp
+    g_src/resize++.cpp
+    g_src/renderer_offscreen.cpp
+    g_src/ttf_manager.cpp
+  : <link>shared ;
+
+exe dwarf-fortress-tetris
+  : g_src/tetris.cpp
+    dwarf-fortress-graphics ;
+
+multiarch.build build
+  : dwarf-fortress-tetris
+  : dwarf-fortress-graphics ;
+
+multiarch.install install
+  : dwarf-fortress-tetris
+  : dwarf-fortress-graphics ;
