@@ -1,3 +1,9 @@
+dwarf-fortress (0.34.3.0-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Tue, 28 Feb 2012 21:00:06 +0100
+
 dwarf-fortress (0.34.2.0-1) unstable; urgency=low
 
   * Initial release (Closes: #588377)
