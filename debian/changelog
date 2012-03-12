@@ -1,3 +1,9 @@
+dwarf-fortress-mod-phoebus (0.34.5.0-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Mon, 12 Mar 2012 21:26:06 +0100
+
 dwarf-fortress-mod-phoebus (0.34.4.0-1) unstable; urgency=low
 
   * New upstream version.
