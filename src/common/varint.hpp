@@ -36,6 +36,20 @@ namespace df {
         }
     };
 
+    template< typename IntegerType, bool const Signed >
+    struct varint_value {
+        IntegerType integer_;
+        void set(IntegerType const& integer) { integer_ = integer; }
+        IntegerType get() const { return integer_; }
+    };
+
+    template< typename IntegerType >
+    struct varint_value< IntegerType, true > {
+        IntegerType integer_;
+        void set(IntegerType const& integer) { integer_ = (integer << 1) ^ (integer >> std::numeric_limits< IntegerType >::digits); }
+        IntegerType get() const { return (integer_ >> 1) ^ -static_cast< IntegerType >(integer_ & 1); }
+    };
+
     template< typename IntegerType, std::size_t const BufferSize >
     struct varint {
         typedef varint< IntegerType, BufferSize - 1 > next_vint;
@@ -68,35 +82,35 @@ namespace df {
 
         std::uint8_t buffer_[BufferSize];
         std::size_t size_;
-        IntegerType value_;
+        varint_value< IntegerType, std::numeric_limits< IntegerType >::is_signed > value_;
 
 #ifdef DWARF_FORTRESS_VINT_DISABLE_COMPRESSION
-        explicit vint(IntegerType const value) :
-        value_(value) {
+        explicit varint(IntegerType const value) {
+          value_.set(value);
           size_ = sizeof(IntegerType);
           memcpy(buffer_, &value_, size_);
         }
-        explicit vint(std::uint8_t const* buffer) :
-        value_(0) {
+        explicit varint(std::uint8_t const* buffer) {
+          value_.set(0);
           size_ = sizeof(IntegerType);
           memcpy(&value_, buffer, size_);
           memcpy(buffer_, buffer, size_);
         }
 #else /* DWARF_FORTRESS_VINT_DISABLE_COMPRESSION */
 
-        explicit varint(IntegerType const value) :
-            value_(value) {
+        explicit varint(IntegerType const value) {
+          value_.set(value);
           size_ = write(buffer_, value_);
         }
-        explicit varint(std::uint8_t const* buffer) :
-            value_(0) {
+        explicit varint(std::uint8_t const* buffer) {
+          value_.set(0);
           size_ = read(buffer, value_);
           std::memcpy(buffer_, buffer, size_);
         }
 #endif /* DWARF_FORTRESS_VINT_DISABLE_COMPRESSION */
 
         operator IntegerType() const {
-          return value_;
+          return value_.get();
         }
     };
 
