@@ -1,3 +1,9 @@
+dwarf-fortress-mod-mayday (0.34.10.0-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Sun, 03 Jun 2012 20:58:53 +0200
+
 dwarf-fortress-mod-mayday (0.34.5.0-1) unstable; urgency=low
 
   * New upstream version.
