@@ -1,0 +1,144 @@
+From: Beren Minor <beren.minor+git@gmail.com>
+Date: Tue, 21 Feb 2012 22:46:03 +0100
+Subject: DEBIAN: Added CMakeLists.txt.
+
+---
+ CMakeLists.txt |  129 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 129 insertions(+)
+ create mode 100644 CMakeLists.txt
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+new file mode 100644
+index 0000000..11f5891
+--- /dev/null
++++ b/CMakeLists.txt
+@@ -0,0 +1,129 @@
++cmake_minimum_required(VERSION 2.6.2)
++include(GNUInstallDirs)
++
++project(dwarf-fortress)
++file(READ "${CMAKE_SOURCE_DIR}/debian/version" DWARF_FORTRESS_VERSION)
++string(STRIP "${DWARF_FORTRESS_VERSION}" DWARF_FORTRESS_VERSION)
++string(REGEX REPLACE "\\..*$" "" DWARF_FORTRESS_SOVERSION "${DWARF_FORTRESS_VERSION}")
++
++set(CMAKE_CXX_FLAGS "-std=c++0x -Dlinux -Dunix")
++
++find_package(PkgConfig REQUIRED)
++pkg_check_modules(GTK2     REQUIRED gtk+-2.0)
++pkg_check_modules(OPENGL   REQUIRED gl)
++pkg_check_modules(GLEW     REQUIRED glew)
++pkg_check_modules(SDL      REQUIRED sdl)
++pkg_check_modules(SDLIMAGE REQUIRED SDL_image)
++pkg_check_modules(SDLTTF   REQUIRED SDL_ttf)
++
++include_directories(
++  ${GTK2_INCLUDE_DIRS}
++  ${OPENGL_INCLUDE_DIRS}
++  ${GLEW_INCLUDE_DIRS}
++  ${SDL_INCLUDE_DIRS}
++  ${SDLIMAGE_INCLUDE_DIRS}
++  ${SDLTTF_INCLUDE_DIRS}
++)
++link_directories(
++  ${GTK2_LIBRARY_DIRS}
++  ${OPENGL_INCLUDE_DIRS}
++  ${GLEW_INCLUDE_DIRS}
++  ${SDL_LIBRARY_DIRS}
++  ${SDLIMAGE_LIBRARY_DIRS}
++  ${SDLTTF_LIBRARY_DIRS}
++)
++
++# This is ugly, but we don't have a clean and wide enough multiarch support yet.
++set(DWARF_FORTRESS_ARCH_BITS 32)
++find_program(DPKGARCH_COMMAND dpkg-architecture)
++if(NOT "${DPKGARCH_COMMAND}" STREQUAL "DPKGARCH_COMMAND-NOTFOUND")
++  execute_process(
++    COMMAND ${DPKGARCH_COMMAND} -qDEB_BUILD_ARCH_BITS
++    OUTPUT_VARIABLE ${DWARF_FORTRESS_ARCH_BITS}
++  )
++endif()
++if(${DWARF_FORTRESS_ARCH_BITS} EQUAL 64)
++  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
++  link_directories(${CMAKE_BINARY_DIR})
++  execute_process(
++    COMMAND ln -sf ${CMAKE_SOURCE_DIR}/lib/libGLEW.so.1.6        ${CMAKE_BINARY_DIR}/libGLEW.so
++    COMMAND ln -sf ${CMAKE_SOURCE_DIR}/lib/libSDL_image-1.2.so.0 ${CMAKE_BINARY_DIR}/libSDL_image.so
++    COMMAND ln -sf ${CMAKE_SOURCE_DIR}/lib/libSDL_ttf-2.0.so.0   ${CMAKE_BINARY_DIR}/libSDL_ttf.so
++  )
++  install(
++    FILES ${CMAKE_SOURCE_DIR}/lib/libGLEW.so.1.6
++          ${CMAKE_SOURCE_DIR}/lib/libSDL_image-1.2.so.0
++          ${CMAKE_SOURCE_DIR}/lib/libSDL_ttf-2.0.so.0
++    DESTINATION ${CMAKE_INSTALL_LIBDIR}/dwarf-fortress
++  )
++
++  foreach(GTK2_LIBRARY ${GTK2_LIBRARIES})
++    string(REPLACE "-l" "" GTK2_LIBRARY "${GTK2_LIBRARY}")
++    if(EXISTS /usr/lib32/lib${GTK2_LIBRARY}.so.0)
++      execute_process(COMMAND ln -sf /usr/lib32/lib${GTK2_LIBRARY}.so.0 ${CMAKE_BINARY_DIR}/lib${GTK2_LIBRARY}.so)
++    elseif(EXISTS /usr/lib32/lib${GTK2_LIBRARY}.so.2)
++      execute_process(COMMAND ln -sf /usr/lib32/lib${GTK2_LIBRARY}.so.2 ${CMAKE_BINARY_DIR}/lib${GTK2_LIBRARY}.so)
++    elseif(EXISTS /lib32/lib${GTK2_LIBRARY}.so.0)
++      execute_process(COMMAND ln -sf /lib32/lib${GTK2_LIBRARY}.so.0 ${CMAKE_BINARY_DIR}/lib${GTK2_LIBRARY}.so)
++    endif()
++  endforeach()
++endif()
++# End of the ugly part
++
++add_library(dwarf-fortress-graphics SHARED
++  g_src/basics.cpp
++  g_src/command_line.cpp
++  g_src/files.cpp
++  g_src/find_files_posix.cpp
++  g_src/graphics.cpp
++  g_src/enabler.cpp
++  g_src/init.cpp
++  g_src/interface.cpp
++  g_src/keybindings.cpp
++  g_src/music_and_sound_openal.cpp
++  g_src/random.cpp
++  g_src/textlines.cpp
++  g_src/enabler_input.cpp
++  g_src/ViewBase.cpp
++  g_src/KeybindingScreen.cpp
++  g_src/win32_compat.cpp
++  g_src/textures.cpp
++  g_src/resize++.cpp
++  g_src/renderer_offscreen.cpp
++  g_src/ttf_manager.cpp
++)
++set_target_properties(dwarf-fortress-graphics PROPERTIES
++  SONAME dwarf-fortress-graphics
++  VERSION ${DWARF_FORTRESS_VERSION}
++  SOVERSION ${DWARF_FORTRESS_SOVERSION}
++)
++target_link_libraries(dwarf-fortress-graphics
++  ${GTK2_LIBRARIES}
++  ${OPENGL_LIBRARIES}
++  ${GLEW_LIBRARIES}
++  ${SDL_LIBRARIES}
++  ${SDLIMAGE_LIBRARIES}
++  ${SDLTTF_LIBRARIES}
++)
++
++add_executable(dwarf-fortress-tetris
++  g_src/tetris.cpp
++)
++target_link_libraries(dwarf-fortress-tetris dwarf-fortress-graphics)
++
++add_custom_target(dwarf-fortress-link
++  COMMAND ln -sf ../libdwarf-fortress-graphics.so.0 ${CMAKE_BINARY_DIR}/libgraphics.so
++)
++add_dependencies(dwarf-fortress-graphics dwarf-fortress-link)
++
++install(TARGETS dwarf-fortress-graphics dwarf-fortress-tetris
++  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/games
++  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++)
++install(PROGRAMS ${CMAKE_SOURCE_DIR}/libs/Dwarf_Fortress
++  DESTINATION ${CMAKE_INSTALL_LIBDIR}/dwarf-fortress
++  RENAME dwarf-fortress
++)
++install(FILES ${CMAKE_BINARY_DIR}/libgraphics.so
++  DESTINATION ${CMAKE_INSTALL_LIBDIR}/dwarf-fortress
++)
