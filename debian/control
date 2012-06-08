@@ -4,6 +4,7 @@ Priority: extra
 Maintainer: Beren Minor <beren.minor+debian@gmail.com>
 Build-Depends: debhelper (>= 7.2.3~),
                python-support,
+               python,
                docbook-xsl,
                docbook-xml,
                xsltproc,
