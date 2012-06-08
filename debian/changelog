@@ -1,3 +1,9 @@
+dwarf-fortress (0.34.11.0-4) unstable; urgency=low
+
+  * Change interpreter of dwarf-fortress script to bash.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Sat, 09 Jun 2012 01:30:56 +0200
+
 dwarf-fortress (0.34.11.0-3) unstable; urgency=low
 
   * Fix some lintian warnings: copyright uri, standard numbers, architecture
