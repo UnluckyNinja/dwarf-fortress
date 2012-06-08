@@ -1,3 +1,10 @@
+dwarf-fortress-mod-ironhand (0.34.11.0-2) unstable; urgency=low
+
+  * Fix some lintian warnings: architecture independent package, watch file,
+    standards number, debhelper version, copyright uri.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Sat, 09 Jun 2012 00:45:04 +0200
+
 dwarf-fortress-mod-ironhand (0.34.11.0-1) unstable; urgency=low
 
   * New upstream version
