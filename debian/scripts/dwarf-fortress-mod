@@ -1,37 +1,72 @@
 #!/bin/bash
 
+dwarf-fortress-mod-usage() {
+  echo "dwarf-fortress-mod: Dwarf Fortress mod selection script. List available graphic mods"
+  echo "                    and select the one to use for the next generated world."
+  echo ""
+  echo "usage: dwarf-fortress-mod [-h|--help] [-l|--list] [-s|--select <mod-name>]"
+  echo "      -h|--help              :   prints this help."
+  echo "      -l|--list              :   list available graphic mods."
+  echo "      -s|--select <mod-name> :   select <mod-name> as the current graphic mod."
+  echo ""
+  echo "  For more information, see 'man dwarf-fortress-mod'."
+  echo ""
+}
+
+GETOPT_TMP=`getopt -o hls: --long help,list,select: -n 'dwarf-fortress-configure' -- "$@"`
+if [ $? != 0 ] ; then echo "terminating..." >&2 ; exit 1 ; fi
+eval set -- "$GETOPT_TMP"
+
+DWARF_FORTRESS_LIST_MODS=0
+DWARF_FORTRESS_SELECT_MOD=
+while true ; do
+  case "$1" in
+    -h|--help) dwarf-fortress-mod-usage ; exit 1 ; shift ;;
+    -l|--list) DWARF_FORTRESS_LIST_MODS=1 ; shift ;;
+    -s|--select) DWARF_FORTRESS_SELECT_MOD="$2" ; shift 2 ;;
+    --) shift ; break ;;
+    *) echo "Internal error!" ; exit 1 ;;
+  esac
+done
+
 . dwarf-fortress-configure &> /dev/null
 
-if [ "$1" = "-l" ] || [ "$1" = "--list" ]
+if [ ${DWARF_FORTRESS_LIST_MODS} = 1 ]
 then
-  echo "dwarf-fortress user mods:" >&2
-  find ${DWARF_FORTRESS_USER_MODS_HOME}/* -type d -prune -exec basename '{}' \; 2>/dev/null | sed -re 's/^/  /g'
+  DWARF_FORTRESS_CURRENT_MOD_NAME=$(readlink ${DWARF_FORTRESS_CURRENT_MOD})
+  DWARF_FORTRESS_CURRENT_MOD_NAME=${DWARF_FORTRESS_CURRENT_MOD_NAME#${DWARF_FORTRESS_DATA_HOME}/mods/}
 
+  echo "dwarf-fortress user mods:" >&2
+  find ${DWARF_FORTRESS_USER_MODS_HOME}/* -type d -prune -exec basename '{}' \; 2>/dev/null | sed -re "s@^@  @g; s@ ${DWARF_FORTRESS_CURRENT_MOD_NAME}\$@*${DWARF_FORTRESS_CURRENT_MOD_NAME}@g"
+
+  DWARF_FORTRESS_CURRENT_MOD_NAME=$(readlink ${DWARF_FORTRESS_CURRENT_MOD})
+  DWARF_FORTRESS_CURRENT_MOD_NAME=${DWARF_FORTRESS_CURRENT_MOD_NAME#${DWARF_FORTRESS_SHARE}/mods/}
+  
   echo "dwarf-fortress system mods:" >&2
-  find ${DWARF_FORTRESS_MODS_HOME}/* -type d -prune -exec basename '{}' \; 2>/dev/null | sed -re 's/^/  /g'
+  find ${DWARF_FORTRESS_MODS_HOME}/* -type d -prune -exec basename '{}' \; 2>/dev/null | sed -re "s@^@  @g; s@ ${DWARF_FORTRESS_CURRENT_MOD_NAME}\$@*${DWARF_FORTRESS_CURRENT_MOD_NAME}@g"
 fi
 
-if [ "$1" = "-s" ] || [ "$1" = "--select" ]
+if [ ! -z "${DWARF_FORTRESS_SELECT_MOD}" ]
 then
 
-  if [ -d ${DWARF_FORTRESS_USER_MODS_HOME}/$2 ]
+  if [ -d ${DWARF_FORTRESS_USER_MODS_HOME}/${DWARF_FORTRESS_SELECT_MOD} ]
   then
-    echo -n "dwarf-fortress: Installing $2 mod from user mods... " >&2
+    echo -n "dwarf-fortress: Installing ${DWARF_FORTRESS_SELECT_MOD} mod from user mods... " >&2
     rm -f ${DWARF_FORTRESS_CURRENT_MOD}
-    ln -sf ${DWARF_FORTRESS_USER_MODS_HOME}/$2 ${DWARF_FORTRESS_CURRENT_MOD} 2>/dev/null
+    ln -sf ${DWARF_FORTRESS_USER_MODS_HOME}/${DWARF_FORTRESS_SELECT_MOD} ${DWARF_FORTRESS_CURRENT_MOD} 2>/dev/null
     echo "done" >&2
     echo "dwarf-fortress: Remember to enable graphics mode and to change graphic file to tiles.png or tiles-lite.png in dwarf-fortress config file." >&2
 
-  elif [ -d ${DWARF_FORTRESS_MODS_HOME}/$2 ]
+  elif [ -d ${DWARF_FORTRESS_MODS_HOME}/${DWARF_FORTRESS_SELECT_MOD} ]
   then
-    echo -n "dwarf-fortress: Installing $2 mod from system mods... " >&2
+    echo -n "dwarf-fortress: Installing ${DWARF_FORTRESS_SELECT_MOD} mod from system mods... " >&2
     rm -f ${DWARF_FORTRESS_CURRENT_MOD}
-    ln -sf ${DWARF_FORTRESS_MODS_HOME}/$2 ${DWARF_FORTRESS_CURRENT_MOD} 2>/dev/null
+    ln -sf ${DWARF_FORTRESS_MODS_HOME}/${DWARF_FORTRESS_SELECT_MOD} ${DWARF_FORTRESS_CURRENT_MOD} 2>/dev/null
     echo "done" >&2
     echo "dwarf-fortress: Remember to enable graphics mode and to change graphic file to tiles.png or tiles-lite.png in dwarf-fortress config file." >&2
 
   else
-    echo "dwarf-fortress: mod $2 not found." >&2
+    echo "dwarf-fortress: mod ${DWARF_FORTRESS_SELECT_MOD} not found." >&2
   fi
 
   cp -f ${DWARF_FORTRESS_CURRENT_MOD}/tiles.png      ${DWARF_FORTRESS_CACHE_HOME}/data/art/  2>/dev/null

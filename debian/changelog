@@ -1,3 +1,9 @@
+dwarf-fortress (0.34.11.0-2) unstable; urgency=low
+
+  * Update icon and added usage help to configure and mod scripts.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Sat, 09 Jun 2012 00:07:26 +0200
+
 dwarf-fortress (0.34.11.0-1) unstable; urgency=low
 
   * New upstream version

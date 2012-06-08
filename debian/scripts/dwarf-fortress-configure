@@ -1,5 +1,30 @@
 #!/bin/bash
 
+dwarf-fortress-config-usage() {
+  echo "dwarf-fortress-configure: Dwarf Fortress configuration script. Initializes and keep user folders up-to-date."
+  echo ""
+  echo "usage: dwarf-fortress-configure [-h|--help] [-e|--edit]"
+  echo "      -h|--help :   prints this help."
+  echo "      -e|--edit :   edit the configuration files in the default editor."
+  echo ""
+  echo "  For more information, see 'man dwarf-fortress-configure'."
+  echo ""
+}
+
+GETOPT_TMP=`getopt -o he --long help,edit -n 'dwarf-fortress-configure' -- "$@"`
+if [ $? != 0 ] ; then echo "terminating..." >&2 ; exit 1 ; fi
+eval set -- "$GETOPT_TMP"
+
+DWARF_FORTRESS_EDIT_CONFIG=0
+while true ; do
+  case "$1" in
+    -h|--help) dwarf-fortress-config-usage ; exit 1 ; shift ;;
+    -e|--edit) DWARF_FORTRESS_EDIT_CONFIG=1 ; shift ;;
+    --) shift ; break ;;
+    *) echo "Internal error!" ; exit 1 ;;
+  esac
+done
+
 echo -n "dwarf-fortress: Refreshing local data... " >&2
 
 DWARF_FORTRESS_DATA_HOME=${DWARF_FORTRESS_DATA_HOME:-${XDG_DATA_HOME:-~/.local/share}/dwarf-fortress}
@@ -40,10 +65,11 @@ rm -rf ${DWARF_FORTRESS_CACHE_HOME}/data/art
 ln -s ${DWARF_FORTRESS_CONFIG_HOME}        ${DWARF_FORTRESS_CACHE_HOME}/data/init
 ln -s ${DWARF_FORTRESS_DATA_HOME}/art      ${DWARF_FORTRESS_CACHE_HOME}/data/
 
-if [ "$1" = "-e" ]
+if [ ${DWARF_FORTRESS_EDIT_CONFIG} = 1 ]
 then
-  gedit ${DWARF_FORTRESS_CONFIG_HOME}/{colors,d_init,init}.txt
+  xdg-open ${DWARF_FORTRESS_CONFIG_HOME}/colors.txt
+  xdg-open ${DWARF_FORTRESS_CONFIG_HOME}/d_init.txt
+  xdg-open ${DWARF_FORTRESS_CONFIG_HOME}/init.txt
 fi
 
 echo "done" >&2
-

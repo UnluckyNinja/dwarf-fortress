@@ -104,6 +104,7 @@
     <variablelist>
       <varlistentry>
         <term><option>-e</option></term>
+        <term><option>--edit</option></term>
         <listitem>
           <para>This will open the user's configuration files in <application>gedit</application>.</para>
         </listitem>
