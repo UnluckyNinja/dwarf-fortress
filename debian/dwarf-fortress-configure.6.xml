@@ -26,7 +26,7 @@
   <!-- This is the application/package name.         -->
   <!ENTITY dhucpackage "DWARF-FORTRESS">
   <!ENTITY dhpackage   "dwarf-fortress-configure">
-  <!ENTITY dhrelease   "0.34.10.0">
+  <!ENTITY dhrelease   "0.34.11.0">
 
   <!-- If the application e.g. belongs to a package like X.org,  -->
   <!-- this should be set to the package/suite name instead of   -->
