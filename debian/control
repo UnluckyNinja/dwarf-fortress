@@ -2,8 +2,7 @@ Source: dwarf-fortress
 Section: non-free/games
 Priority: extra
 Maintainer: Beren Minor <beren.minor+debian@gmail.com>
-Build-Depends: debhelper (>= 7.2.3~),
-               python-support,
+Build-Depends: debhelper (>= 9),
                python,
                docbook-xsl,
                docbook-xml,
@@ -22,35 +21,39 @@ Build-Depends: debhelper (>= 7.2.3~),
                libz-dev [i386] | lib32z-dev [amd64],
                ia32-libs-gtk [amd64],
                ia32-libs-dev [amd64],
-               libgl-dev [i386],
+               libgl1-mesa-dev [i386],
                libglu-dev [i386],
                libsdl-dev [i386]
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 Homepage: http://www.bay12games.com/dwarves/
 Vcs-Git: git://github.com/berenm/dwarf-fortress.git
 Vcs-Browser: https://github.com/berenm/dwarf-fortress/
 
 Package: dwarf-fortress-data
-Architecture: any
+Architecture: all
 Depends: ${misc:Depends}
 Description: Dwarf Fortress data files
  Dwarf Fortress is a single-player fantasy game. You can control a dwarven
  outpost or an adventurer in a randomly generated, persistent world.
  .
+ This package contains data files used by Dwarf Fortress.
+ .
  Copyright: 2002-2012 Tarn Adams toadyone@bay12games.com
 
 Package: dwarf-fortress-bin
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, dwarf-fortress-data (=${binary:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, dwarf-fortress-data (=${source:Version})
 Description: Dwarf Fortress binaries
  Dwarf Fortress is a single-player fantasy game. You can control a dwarven
  outpost or an adventurer in a randomly generated, persistent world.
+ .
+ This package contains the binaries of Dwarf Fortress.
  .
  Copyright: 2002-2012 Tarn Adams toadyone@bay12games.com
 
 Package: dwarf-fortress
 Architecture: any
-Depends: ${misc:Depends}, dwarf-fortress-data (=${binary:Version}), dwarf-fortress-bin, dwarf-fortress-mod-default
+Depends: ${misc:Depends}, dwarf-fortress-data (=${source:Version}), dwarf-fortress-bin, dwarf-fortress-mod-default
 Description: Dwarf Fortress game - http://www.bay12games.com/dwarves
  Dwarf Fortress is a single-player fantasy game. You can control a dwarven
  outpost or an adventurer in a randomly generated, persistent world.

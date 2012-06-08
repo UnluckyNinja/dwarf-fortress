@@ -1,0 +1,2 @@
+version=3
+https://github.com/berenm/dwarf-fortress/tags .*/tarball/upstream/(\d[\d.]+)

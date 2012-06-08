@@ -1,3 +1,10 @@
+dwarf-fortress (0.34.11.0-3) unstable; urgency=low
+
+  * Fix some lintian warnings: copyright uri, standard numbers, architecture
+    independent.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Sat, 09 Jun 2012 01:07:14 +0200
+
 dwarf-fortress (0.34.11.0-2) unstable; urgency=low
 
   * Update icon and added usage help to configure and mod scripts.
