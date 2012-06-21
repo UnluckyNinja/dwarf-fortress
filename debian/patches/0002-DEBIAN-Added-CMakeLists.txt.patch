@@ -9,7 +9,7 @@ Subject: DEBIAN: Added CMakeLists.txt.
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 new file mode 100644
-index 0000000..8c6b97d
+index 0000000..2a1b8ce
 --- /dev/null
 +++ b/CMakeLists.txt
 @@ -0,0 +1,66 @@
@@ -64,13 +64,13 @@ index 0000000..8c6b97d
 +target_link_libraries(dwarf-fortress-tetris dwarf-fortress-graphics)
 +
 +add_custom_target(dwarf-fortress-link
-+  COMMAND ln -sf ../libdwarf-fortress-graphics.so.0 ${CMAKE_BINARY_DIR}/libgraphics.so
++  COMMAND ln -sf "../$ENV{DEB_HOST_MULTIARCH}/libdwarf-fortress-graphics.so.0" ${CMAKE_BINARY_DIR}/libgraphics.so
 +)
 +add_dependencies(dwarf-fortress-graphics dwarf-fortress-link)
 +
 +install(TARGETS dwarf-fortress-graphics dwarf-fortress-tetris
 +  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/games
-+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/$ENV{DEB_HOST_MULTIARCH}"
 +)
 +install(PROGRAMS ${CMAKE_SOURCE_DIR}/libs/Dwarf_Fortress
 +  DESTINATION ${CMAKE_INSTALL_LIBDIR}/dwarf-fortress

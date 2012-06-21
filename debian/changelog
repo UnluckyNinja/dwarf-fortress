@@ -1,3 +1,9 @@
+dwarf-fortress (0.34.11.0-5) unstable; urgency=low
+
+  * Add multiarch support.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Thu, 21 Jun 2012 22:19:31 +0200
+
 dwarf-fortress (0.34.11.0-4) unstable; urgency=low
 
   * Change interpreter of dwarf-fortress script to bash.

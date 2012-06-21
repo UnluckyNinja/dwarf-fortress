@@ -25,10 +25,23 @@ Description: Dwarf Fortress data files
  .
  Copyright: 2002-2012 Tarn Adams toadyone@bay12games.com
 
+Package: libdwarf-fortress-graphics0
+Architecture: any
+Multi-Arch: same
+Pre-Depends: multiarch-support
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Dwarf Fortress binaries
+ Dwarf Fortress is a single-player fantasy game. You can control a dwarven
+ outpost or an adventurer in a randomly generated, persistent world.
+ .
+ This package contains the opened graphics library of Dwarf Fortress.
+ .
+ Copyright: 2002-2012 Tarn Adams toadyone@bay12games.com
+
 Package: dwarf-fortress-bin
 Architecture: i386
 Multi-Arch: foreign
-Depends: ${shlibs:Depends}, ${misc:Depends}, dwarf-fortress-data (=${source:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, libdwarf-fortress-graphics0
 Description: Dwarf Fortress binaries
  Dwarf Fortress is a single-player fantasy game. You can control a dwarven
  outpost or an adventurer in a randomly generated, persistent world.
