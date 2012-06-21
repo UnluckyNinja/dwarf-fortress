@@ -3,6 +3,7 @@ Section: non-free/games
 Priority: extra
 Maintainer: Beren Minor <beren.minor+debian@gmail.com>
 Build-Depends: debhelper (>= 9), python, docbook-xsl, docbook-xml, xsltproc,
+               cmake,
                libsdl1.2-dev, libsdl-image1.2-dev, libsdl-ttf2.0-dev,
                libopenal-dev, libsndfile1-dev, libgtk2.0-dev, 
                libncursesw5-dev, libncurses-dev, libz-dev,
@@ -14,6 +15,7 @@ Vcs-Browser: https://github.com/berenm/dwarf-fortress/
 
 Package: dwarf-fortress-data
 Architecture: all
+Multi-Arch: foreign
 Depends: ${misc:Depends}
 Description: Dwarf Fortress data files
  Dwarf Fortress is a single-player fantasy game. You can control a dwarven
@@ -37,6 +39,7 @@ Description: Dwarf Fortress binaries
 
 Package: dwarf-fortress
 Architecture: any
+Multi-Arch: same
 Depends: ${misc:Depends}, dwarf-fortress-data (=${source:Version}), dwarf-fortress-bin, dwarf-fortress-mod-default
 Description: Dwarf Fortress game - http://www.bay12games.com/dwarves
  Dwarf Fortress is a single-player fantasy game. You can control a dwarven
