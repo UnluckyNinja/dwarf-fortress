@@ -1,3 +1,9 @@
+dwarf-fortress-mod-ironhand (0.34.11.0-3) unstable; urgency=low
+
+  * Add multiarch support.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Thu, 21 Jun 2012 22:11:49 +0200
+
 dwarf-fortress-mod-ironhand (0.34.11.0-2) unstable; urgency=low
 
   * Fix some lintian warnings: architecture independent package, watch file,
