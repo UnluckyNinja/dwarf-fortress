@@ -10,6 +10,7 @@ Vcs-Browser: https://github.com/berenm/dwarf-fortress/
 
 Package: dwarf-fortress-mod-default
 Architecture: all
+Multi-Arch: foreign
 Depends: ${misc:Depends}, dwarf-fortress-data (>=0.34.11.0)
 Description: Dwarf Fortress default graphic mod
  Dwarf Fortress is a single-player fantasy game. You can control a dwarven

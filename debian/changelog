@@ -1,9 +1,15 @@
+dwarf-fortress-mod-default (0.34.11.0-3) unstable; urgency=low
+
+  * Add multiarch support.
+
+ -- Beren Minor <beren.minor+debian@gmail.com>  Thu, 21 Jun 2012 22:10:24 +0200
+
 dwarf-fortress-mod-default (0.34.11.0-2) unstable; urgency=low
 
   * Fix some lintian warnings: architecture independent package, watch file,
     standards number, debhelper version, copyright uri.
 
- -- Beren Minor <beren.minor+debian@gmail.com>  Sat, 09 Jun 2012 00:36:08 +0200
+ -- Beren Minor <beren.minor+debian@gmail.com>  Thu, 21 Jun 2012 22:09:55 +0200
 
 dwarf-fortress-mod-default (0.34.11.0-1) unstable; urgency=low
 
