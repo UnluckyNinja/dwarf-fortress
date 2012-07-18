@@ -37,7 +37,7 @@ void renderer::display() {
       std::uint32_t const y = coord.second;
       std::size_t const tile = x * gps.dimy + y;
 
-      if (screen[tile * 4] != screen_old[tile * 4]
+      if (((uint32_t*) screen)[tile] != ((uint32_t*) screen_old)[tile]
           || (use_graphics
               && (screentexpos[tile] != screentexpos_old[tile]
                   || screentexpos_addcolor[tile] != screentexpos_addcolor_old[tile]
@@ -47,6 +47,8 @@ void renderer::display() {
         update_tile(x, y);
       }
     }
+
+    render();
   }
 
   if (gps.force_full_display_count > 0)
