@@ -1,0 +1,9 @@
+[submodule "lib/logging"]
+	path = lib/logging
+	url = git://github.com/berenm/liblogging.git
+[submodule "lib/gtulu"]
+	path = lib/gtulu
+	url = git://github.com/berenm/libgtulu.git
+[submodule "lib/dwarf-fortress-graphics"]
+	path = lib/dwarf-fortress-graphics
+	url = git://github.com/berenm/dwarf-fortress.git

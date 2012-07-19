@@ -17,7 +17,6 @@
 
 #include <SDL/SDL_video.h>
 
-#define GTULU_USE_LIBLOGGING
 #include "client_program_format.hpp"
 #include "gtulu/internal/context.hpp"
 #include "gtulu/internal/storage/data.hpp"
@@ -222,6 +221,7 @@ namespace df {
 
   void display_client::control_thread::operator()() {
     client_.display(zmq_context_);
+    df::display::release();
   }
 
 } // namespace df

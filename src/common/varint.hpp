@@ -21,97 +21,114 @@ namespace df {
 
   namespace detail {
 
+    template< typename IntegerType, bool const Signed >
+    struct varint_value {
+      IntegerType integer_;
+      void        set(IntegerType const& integer) { integer_ = integer; }
+
+      IntegerType get() const { return integer_; }
+
+    };
+
+    template< typename IntegerType >
+    struct varint_value< IntegerType, true > {
+      IntegerType integer_;
+
+      void set(IntegerType const& integer) { integer_ = (integer << 1) ^ (integer >> std::numeric_limits< IntegerType >::digits); }
+
+      IntegerType get() const { return (integer_ >> 1) ^ -static_cast< IntegerType >(integer_ & 1); }
+
+    };
+
     template< typename IntegerType, std::size_t const BufferSize = sizeof(IntegerType) + sizeof(IntegerType) / 8 + 1 >
     struct varint;
 
     template< typename IntegerType >
     struct varint< IntegerType, 1 > {
-        static std::size_t write(std::uint8_t buffer[1], IntegerType const value, bool matched) {
-          *buffer = static_cast< std::uint8_t >(value & 0x7F);
-          return 1;
-        }
-        static std::size_t read(std::uint8_t const buffer[1], IntegerType& value) {
-          value = *buffer;
-          return 1;
-        }
-    };
+      typedef varint_value< IntegerType, std::numeric_limits< IntegerType >::is_signed > value_type;
 
-    template< typename IntegerType, bool const Signed >
-    struct varint_value {
-        IntegerType integer_;
-        void set(IntegerType const& integer) { integer_ = integer; }
-        IntegerType get() const { return integer_; }
-    };
+      static std::size_t write(std::uint8_t buffer[1], value_type const value, bool matched) {
+        *buffer = static_cast< std::uint8_t >(value.integer_ & 0x7F);
+        return 1;
+      }
 
-    template< typename IntegerType >
-    struct varint_value< IntegerType, true > {
-        IntegerType integer_;
-        void set(IntegerType const& integer) { integer_ = (integer << 1) ^ (integer >> std::numeric_limits< IntegerType >::digits); }
-        IntegerType get() const { return (integer_ >> 1) ^ -static_cast< IntegerType >(integer_ & 1); }
+      static std::size_t read(std::uint8_t const buffer[1], value_type& value) {
+        value.integer_ = *buffer;
+        return 1;
+      }
+
     };
 
     template< typename IntegerType, std::size_t const BufferSize >
     struct varint {
-        typedef varint< IntegerType, BufferSize - 1 > next_vint;
-        static std::uint8_t const vint_mask = 0x7F;
-        static IntegerType const max_shift = sizeof(IntegerType) * 8;
-        static IntegerType const vint_shift = (BufferSize - 1) * 7;
+      typedef varint< IntegerType, BufferSize - 1 >                                      next_vint;
+      typedef varint_value< IntegerType, std::numeric_limits< IntegerType >::is_signed > value_type;
 
-        static std::size_t write(std::uint8_t buffer[BufferSize], IntegerType const value, bool matched = false) {
-          std::uint8_t vbyte = static_cast< std::uint8_t >((value >> vint_shift) & vint_mask);
-          std::size_t size = 0;
-          if (matched || vbyte) {
-            *(buffer++) = vbyte | ~(vint_mask);
-            matched = true;
-            size = 1;
-          }
+      static std::uint8_t const vint_mask  = 0x7F;
+      static IntegerType const  max_shift  = sizeof(IntegerType) * 8;
+      static IntegerType const  vint_shift = (BufferSize - 1) * 7;
 
-          return size + next_vint::write(buffer, value, matched);
+      static std::size_t write(std::uint8_t buffer[BufferSize], value_type const value, bool matched=false) {
+        std::uint8_t vbyte = static_cast< std::uint8_t >((value.integer_ >> vint_shift) & vint_mask);
+        std::size_t  size  = 0;
+
+        if (matched || vbyte) {
+          *(buffer++) = vbyte | ~(vint_mask);
+          matched     = true;
+          size        = 1;
         }
 
-        static std::size_t read(std::uint8_t const buffer[BufferSize], IntegerType& value) {
-          std::uint8_t vbyte = *buffer;
-          std::size_t size = 1;
-          if (vbyte & ~(vint_mask)) {
-            size += next_vint::read(buffer + 1, value);
-          }
+        return size + next_vint::write(buffer, value, matched);
+      }
 
-          value |= (vbyte & vint_mask) << (size - 1) * 7;
-          return size;
+      static std::size_t read(std::uint8_t const buffer[BufferSize], value_type& value) {
+        std::uint8_t vbyte = *buffer;
+        std::size_t  size  = 1;
+
+        if (vbyte & ~(vint_mask)) {
+          size += next_vint::read(buffer + 1, value);
         }
 
-        std::uint8_t buffer_[BufferSize];
-        std::size_t size_;
-        varint_value< IntegerType, std::numeric_limits< IntegerType >::is_signed > value_;
+        value.integer_ |= (vbyte & vint_mask) << (size - 1) * 7;
+        return size;
+      }
+
+      std::uint8_t buffer_[BufferSize];
+      std::size_t  size_;
+      value_type   value_;
 
 #ifdef DWARF_FORTRESS_VINT_DISABLE_COMPRESSION
-        explicit varint(IntegerType const value) {
-          value_.set(value);
-          size_ = sizeof(IntegerType);
-          memcpy(buffer_, &value_, size_);
-        }
-        explicit varint(std::uint8_t const* buffer) {
-          value_.set(0);
-          size_ = sizeof(IntegerType);
-          memcpy(&value_, buffer, size_);
-          memcpy(buffer_, buffer, size_);
-        }
+      explicit varint(IntegerType const value) {
+        value_.set(value);
+        size_ = sizeof(IntegerType);
+        memcpy(buffer_, &value_.integer_, size_);
+      }
+
+      explicit varint(std::uint8_t const* buffer) {
+        value_.set(0);
+        size_ = sizeof(IntegerType);
+        memcpy(&value_.integer_, buffer, size_);
+        memcpy(buffer_, buffer, size_);
+      }
+
 #else /* DWARF_FORTRESS_VINT_DISABLE_COMPRESSION */
 
-        explicit varint(IntegerType const value) {
-          value_.set(value);
-          size_ = write(buffer_, value_);
-        }
-        explicit varint(std::uint8_t const* buffer) {
-          value_.set(0);
-          size_ = read(buffer, value_);
-          std::memcpy(buffer_, buffer, size_);
-        }
+      explicit varint(IntegerType const value) {
+        value_.set(value);
+        size_ = write(buffer_, value_);
+      }
+
+      explicit varint(std::uint8_t const* buffer) {
+        value_.set(0);
+        size_ = read(buffer, value_);
+        std::memcpy(buffer_, buffer, size_);
+      }
+
 #endif /* DWARF_FORTRESS_VINT_DISABLE_COMPRESSION */
 
-        operator IntegerType() const {
-          return value_.get();
-        }
+      operator IntegerType() const {
+        return value_.get();
+      }
     };
 
   } // namespace detail
@@ -124,23 +141,23 @@ namespace df {
    * Unpack by popping the bytes from the back, until we have found the last byte of
    * the vint. The last one has its most significant bit set to 0.
    */
-#define DECLARE_VARINT(integer_m)                                                 \
-  typedef detail::varint< std::integer_m > v##integer_m;                          \
-  template< >                                                                   \
-  struct packer< std::integer_m > {                                             \
-    static inline void pack(df::bytes& bytes, std::integer_m const value) {     \
-      df::v##integer_m v(value);                                                \
-      bytes.insert(bytes.end(), v.buffer_, v.buffer_ + v.size_);                \
-      std::reverse(bytes.end() - v.size_, bytes.end());                         \
-    }                                                                           \
-    static inline void unpack(df::bytes& bytes, std::integer_m& value) {        \
-      df::bytes buffer;                                                         \
-      do {                                                                      \
-        buffer.push_back(bytes.back());                                         \
-        bytes.pop_back();                                                       \
-      } while (buffer.back() & ~(df::v##integer_m::vint_mask));                 \
-      value = df::v##integer_m(buffer.data());                                  \
-    }                                                                           \
+#define DECLARE_VARINT(integer_m)                                            \
+  typedef detail::varint< std::integer_m > v ## integer_m;                   \
+  template< >                                                                \
+  struct packer< std::integer_m > {                                          \
+    static inline void pack(df::bytes & bytes, std::integer_m const value) { \
+      df::v ## integer_m v(value);                                           \
+      bytes.insert(bytes.end(), v.buffer_, v.buffer_ + v.size_);             \
+      std::reverse(bytes.end() - v.size_, bytes.end());                      \
+    }                                                                        \
+    static inline void unpack(df::bytes & bytes, std::integer_m & value) {   \
+      df::bytes buffer;                                                      \
+      do {                                                                   \
+        buffer.push_back(bytes.back());                                      \
+        bytes.pop_back();                                                    \
+      } while (buffer.back() & ~(df::v ## integer_m::vint_mask));            \
+      value = df::v ## integer_m(buffer.data());                             \
+    }                                                                        \
   };
 
   DECLARE_VARINT(int8_t)
@@ -160,9 +177,11 @@ namespace df {
     bytes.insert(bytes.end(), value.begin(), value.end());
     df::pack(bytes, value.size());
   }
+
   template< >
   void unpack< std::string >(df::bytes& bytes, std::string& value) {
     std::size_t size;
+
     df::unpack(bytes, size);
     value.assign(bytes.end() - size, bytes.end());
     bytes.erase(bytes.end() - size, bytes.end());
@@ -170,9 +189,11 @@ namespace df {
 
   template< std::size_t const Size >
   struct packer< char[Size] > {
-      static inline void pack(df::bytes& bytes, char const value[Size]) {
-        df::pack(bytes, std::string(value));
-      }
+    static inline void pack(df::bytes& bytes, char const value[Size]) {
+      df::pack(bytes, std::string(value));
+
+    }
+
   };
 
 } // namespace df

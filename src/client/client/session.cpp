@@ -16,18 +16,20 @@
 #include "message/session.hpp"
 #include "message/internal.hpp"
 
+#define GTULU_USE_LIBLOGGING
+#include <gtulu/utils/logging.hpp>
+
 namespace df {
 
   session_client::session_client(df::client_configuration_t const& config) :
-      session_state_(waiting_for_server), server_uuid_(""), config_(config) {
-  }
+    session_state_(waiting_for_server), server_uuid_(""), config_(config) {}
 
   void session_client::session(zmq::context_t& zmq_context) {
     namespace session = df::message::session;
 
-    zmq::socket_t zmq_requester(zmq_context, ZMQ_REQ);
+    zmq::socket_t     zmq_requester(zmq_context, ZMQ_REQ);
     std::string const zmq_address = config_.connection_protocol + "://" + config_.server_name + ":"
-        + config_.session_port;
+                                    + config_.session_port;
     zmq_requester.connect(zmq_address.c_str());
 
     df::message::session_t response;
@@ -58,11 +60,13 @@ namespace df {
               throw unexpected_response_type_error();
             }
             break;
+
           case not_connected:
             if (response.type != session::type::connection_response) {
               throw unexpected_response_type_error();
             }
             break;
+
           case connected:
             if (response.type != session::type::heartbeat_response) {
               throw unexpected_response_type_error();
@@ -73,7 +77,7 @@ namespace df {
         switch (response.connection_status) {
           case session::connection_status::connected:
             session_state_ = connected;
-            server_uuid_ = peer_uuid;
+            server_uuid_   = peer_uuid;
             boost::this_thread::sleep(config_.timeout);
             break;
 
@@ -81,9 +85,9 @@ namespace df {
             if (session_state_ == not_connected) {
               throw connection_refused_error();
             } else {
-              std::clog << "W: client disconnected, reconnecting...\n";
+              __warn << "client disconnected, reconnecting...";
               session_state_ = not_connected;
-              server_uuid_ = peer_uuid;
+              server_uuid_   = peer_uuid;
             }
             break;
         }
@@ -109,15 +113,15 @@ namespace df {
 
       }
     }
-  }
+  } // session
 
   session_client::control_thread::control_thread(session_client& client, zmq::context_t& zmq_context) :
-      client_(client), zmq_context_(zmq_context) {
-  }
+    client_(client), zmq_context_(zmq_context) {}
 
   void session_client::control_thread::operator()() {
     /* Wait for display thread to listen on display control */
     zmq::socket_t zmq_display(zmq_context_, ZMQ_REQ);
+
     zmq_display.bind("inproc://display");
     {
       df::bytes request;
@@ -132,11 +136,11 @@ namespace df {
       try {
         client_.session(zmq_context_);
       } catch (df::session_client::timeout_error&) {
-        std::clog << "W: client timed out, reconnecting...\n";
+        __warn << "client timed out, reconnecting...";
       } catch (df::session_client::unexpected_response_type_error&) {
-        std::clog << "E: client received unexpected response, is the server fine?\n";
+        __error << "client received unexpected response, is the server fine?";
       } catch (df::session_client::connection_refused_error&) {
-        std::clog << "E: client connection refused, check your password.\n";
+        __error << "client connection refused, check your password.";
         break;
       }
     }
