@@ -4,5 +4,5 @@
 
 cd ${DWARF_FORTRESS_CACHE_HOME}
 
-export PATH=@INSTALL_PREFIX@/lib/dwarf-fortress/server:$PATH
+export PATH=@CMAKE_INSTALL_PREFIX@/lib/dwarf-fortress-server:$PATH
 dwarf-fortress
